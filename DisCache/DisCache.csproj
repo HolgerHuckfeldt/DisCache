@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\DisCache.proto" GrpcServices="Server" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="7.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.3" />
+    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="3.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\DisCache.DistributedInMemory\DisCache.DistributedInMemory.csproj" />
+    <ProjectReference Include="..\DisCache.Types\DisCache.Types.csproj" />
+    <ProjectReference Include="..\EasyJwt\EasyJwt.csproj" />
+    <ProjectReference Include="..\SqliteCache\SqliteCache.csproj" />
+    <ProjectReference Include="..\Stamon\Persistance.Memory\Persistance.Memory.csproj" />
+    <ProjectReference Include="..\Stamon\Persistance.Sqlite\Persistance.Sqlite.csproj" />
+    <ProjectReference Include="..\Stamon\Stamon.Types\Stamon.Types.csproj" />
+    <ProjectReference Include="..\Stamon\Stamon\Stamon.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Remove="Model\Statistic\Scale.cs" />
+    <Compile Remove="Model\Statistic\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Remove="Model\Statistic\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="Model\Statistic\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Remove="Model\Statistic\**" />
+  </ItemGroup>
+
+</Project>

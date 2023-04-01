@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option csharp_namespace = "DisCache.Protos";
+
+package discache;
+
+service DisCacher {
+	rpc Set (SetCacheRequest) returns (SetCacheResponse);
+	rpc Get (GetCacheRequest) returns (GetCacheResponse);
+    rpc Ping (GetCacheRequest) returns (GetCacheResponse);
+	rpc Refresh (GetCacheRequest) returns (SetCacheResponse);
+	rpc Remove (GetCacheRequest) returns (SetCacheResponse);
+}
+
+message SetCacheRequest {
+	string key=1;
+	bytes data=2;
+	CacheOptions Options=3;
+} 
+
+message CacheOptions
+{
+	int64 AbsoluteExpiration=1;
+	double AbsoluteExpirationRelativeToNow=2;
+	double SlidingExpiration=3;
+}
+
+message GetCacheRequest {
+	string key=1;
+} 
+
+message SetCacheResponse {
+	bool result=1;
+} 
+
+message GetCacheResponse {
+	bytes data=1;
+	bool Found = 2;
+    string Message = 3;
+} 
+
