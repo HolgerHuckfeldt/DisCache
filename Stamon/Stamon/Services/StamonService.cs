@@ -192,7 +192,7 @@ namespace Stamon.Services
             }
             catch (Exception ex)
             {
-
+                _logger.LogError(ex, "Error in ForwardTimer_Elapsed");
             }
         }
 

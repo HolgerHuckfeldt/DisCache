@@ -1,4 +1,5 @@
-﻿using Stamon.Types.Interfaces;
+﻿using Microsoft.Extensions.Logging;
+using Stamon.Types.Interfaces;
 using Stamon.Types.Model;
 using System.Collections.Concurrent;
 using Exception = System.Exception;
@@ -8,8 +9,16 @@ namespace Persistance.Memory.Services
     public class PersistanceService : IStamonMemoryPersistance
     {
         private static readonly object AddLock = new object();
+        private readonly ILogger<PersistanceService> _logger;
 
         private readonly ConcurrentDictionary<string, LinkedList<ActionPerTime>> _entries = new ConcurrentDictionary<string, LinkedList<ActionPerTime>>();
+
+        public PersistanceService(ILogger<PersistanceService> logger)
+        {
+            _logger = logger;
+        }
+
+
 
         /// <summary>
         /// Add a slot
@@ -20,29 +29,41 @@ namespace Persistance.Memory.Services
         /// <returns></returns>
         public Task AddMonitor(Stamon.Types.Model.Monitor slot)
         {
-            lock (AddLock)
+            try
             {
-                var statDateTime = GetTimeScale(slot.Scale);
-                var key = GetKey(slot.Name, slot.Scale);
-
-                if (_entries.TryGetValue(key, out var items))
+                lock (AddLock)
                 {
-                    CheckStat(items, slot.Scale, slot.Duration);
-                    if (items.Last != null && items.Last.Value.Time == statDateTime)
+                    var statDateTime = GetTimeScale(slot.Scale);
+                    var key = GetKey(slot.Name, slot.Scale);
+
+                    if (_entries.TryGetValue(key, out var items))
                     {
-                        items.Last.Value.Count++;
+                        CheckStat(items, slot.Scale, slot.Duration);
+                        if (items.Last != null && items.Last.Value.Time == statDateTime)
+                        {
+                            items.Last.Value.Count++;
+                        }
+                    }
+                    else
+                    {
+                        var list = new LinkedList<ActionPerTime>();
+                        var newElement = new ActionPerTime() { Count = 1, Time = statDateTime };
+                        list.AddLast(newElement);
+
+                        CheckStat(list, slot.Scale, slot.Duration);
+                        if (list.Last != null)
+                        {
+                            list.Last.Value.Count++;
+                        }
+
+                        _entries.TryAdd(key, list);
                     }
                 }
-                else
-                {
-                    var list = new LinkedList<ActionPerTime>();
-                    var newElement = new ActionPerTime() { Count = 1, Time = statDateTime };
-                    list.AddLast(newElement);
 
-                    CheckStat(list, slot.Scale, slot.Duration);
-                    list.Last.Value.Count++;
-                    _entries.TryAdd(key, list);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AddMonitor");
             }
 
             return Task.CompletedTask;
@@ -131,7 +152,7 @@ namespace Persistance.Memory.Services
                 }
                 catch (Exception ex)
                 {
-
+                    _logger.LogError(ex, "Error in CheckStat");
                 }
             }
         }
