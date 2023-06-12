@@ -86,7 +86,6 @@ namespace DisCache.Controllers
                     return NotFound();
                 }
 
-
                 var result = await _service.GetAsync(key);
                 if (result == null)
                 {

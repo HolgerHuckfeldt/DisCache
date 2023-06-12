@@ -434,11 +434,15 @@ namespace Persistance.Sqlite
                         DateTime? dt = null;
                         if (!reader.IsDBNull(0))
                             dt = reader.GetDateTime(0);
-                        long? count = (long)reader[1];
-                        long? id = (long)reader[2];
+
                         reader.Close();
                         if (dt != null)
+                        {
+                            long? count = (long)reader[1];
+                            long? id = (long)reader[2];
                             return new ItemCache() { Count = count.Value, LastInsert = dt.Value, ItemId = id.Value };
+                        }
+
                         return null;
                     }
                 }

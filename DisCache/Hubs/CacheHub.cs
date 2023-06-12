@@ -92,7 +92,7 @@ namespace DisCache.Hubs
                         });
                 }
 
-                await _service.SetAsync(key, data, options);
+                 
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -161,6 +161,15 @@ namespace DisCache.Hubs
                     ? "Hit"
                     : "Miss");
 
+                if (returnData != null)
+                {
+                    _logger.LogDebug("Get {Key} - Hit", key);
+                }
+                else
+                {
+                    _logger.LogDebug("Get {Key} - Fail", key);
+                }
+
                 return new SignalRResponse() { Data = returnData, Success = true };
             }
             catch (Exception ex)
@@ -181,7 +190,7 @@ namespace DisCache.Hubs
             {
                 //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
                 //_logger.LogInformation($"Transport={tt}");
-                _logger.LogInformation("Remove {Key}", key);
+                _logger.LogDebug("Remove {Key}", key);
 
                 await _statisticManager.StatisticEvent("Request");
                 await _statisticManager.StatisticEvent("Delete");

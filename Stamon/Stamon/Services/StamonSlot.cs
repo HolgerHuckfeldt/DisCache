@@ -58,40 +58,40 @@ namespace Stamon.Services
 
         public bool Default { get; set; }
 
-        private DateTime GetTimeScale()
-        {
-            var dt = DateTime.Now;
+        //private DateTime GetTimeScale()
+        //{
+        //    var dt = DateTime.Now;
 
-            switch (_scale)
-            {
-                case Scale.All:
-                    return dt;
+        //    switch (_scale)
+        //    {
+        //        case Scale.All:
+        //            return dt;
 
-                case Scale.Millisecond:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond);
+        //        case Scale.Millisecond:
+        //            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond);
 
-                case Scale.Second:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
+        //        case Scale.Second:
+        //            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
 
-                case Scale.Minute:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0);
+        //        case Scale.Minute:
+        //            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0);
 
-                case Scale.Hour:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0);
+        //        case Scale.Hour:
+        //            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0);
 
-                case Scale.Day:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0);
+        //        case Scale.Day:
+        //            return new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0);
 
-                case Scale.Month:
-                    return new DateTime(dt.Year, dt.Month, 0, 0, 0, 0);
+        //        case Scale.Month:
+        //            return new DateTime(dt.Year, dt.Month, 0, 0, 0, 0);
 
-                case Scale.Year:
-                    return new DateTime(dt.Year, 0, 0, 0, 0, 0);
+        //        case Scale.Year:
+        //            return new DateTime(dt.Year, 0, 0, 0, 0, 0);
 
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
+        //        default:
+        //            throw new ArgumentOutOfRangeException();
+        //    }
+        //}
 
     }
 }
