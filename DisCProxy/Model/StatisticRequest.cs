@@ -2,7 +2,7 @@
 {
     public class StatisticRequest
     {
-        public string SlotName { get; set; }
+        public string SlotName { get; set; } = "";
 
         public DateTime From { get; set; }
 
