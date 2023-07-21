@@ -199,7 +199,8 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 new object[]
                 {
                     key
-                }
+                },
+                token
             );
         }
 
@@ -284,12 +285,12 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 _nextTryTimer.Stop();
                 _connected = true;
             }
-            catch (HttpRequestException rex)
+            catch (HttpRequestException /*rex*/)
             {
                 // Network-Exception. Retry...
                 _nextTryTimer.Start();
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
 
             }

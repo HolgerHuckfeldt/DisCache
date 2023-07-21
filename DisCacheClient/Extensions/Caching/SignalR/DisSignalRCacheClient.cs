@@ -23,7 +23,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
         private readonly HubConnection _connection;
         private bool _connected;
-        private bool _initialized = false;
+        //private bool _initialized = false;
         private bool _firstCall = true;
 
         private readonly Timer _nextTryTimer;
@@ -81,7 +81,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
             return _connection.State == HubConnectionState.Connected;
         }
 
-        public byte[] Get(string key)
+        public byte[]? Get(string key)
         {
             if (!_connected)
             {
@@ -103,7 +103,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
         }
 
-        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
         {
             if (!_connected)
                 await Connect();
@@ -280,18 +280,18 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
             try
             {
-                _initialized = true;
+                //_initialized = true;
 
                 await _connection.StartAsync();
                 _nextTryTimer.Stop();
                 _connected = true;
             }
-            catch (HttpRequestException rex)
+            catch (HttpRequestException /*rex*/)
             {
                 // Network-Exception. Retry...
                 _nextTryTimer.Start();
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
 
             }

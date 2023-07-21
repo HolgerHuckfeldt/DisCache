@@ -9,7 +9,7 @@ namespace Stamon.Model
     {
         public List<SlotConfig>? Provider { get; set; }
 
-        public string Forward { get; set; }
+        public string Forward { get; set; } = String.Empty;
 
         public bool DoForward { get; set; }
     }

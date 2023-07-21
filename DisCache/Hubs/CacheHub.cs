@@ -92,7 +92,6 @@ namespace DisCache.Hubs
                         });
                 }
 
-                 
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -194,6 +193,13 @@ namespace DisCache.Hubs
 
                 await _statisticManager.StatisticEvent("Request");
                 await _statisticManager.StatisticEvent("Delete");
+
+                if (Configuration.UseMemoryCacheAccelerator)
+                {
+                    // Wenn der InMemory-Accelerator aktiviert ist, erst mal da rein schauen.
+                    _memoryCache.Remove(key);
+                }
+
                 await _service.RemoveAsync(key);
                 return new SignalRResponse() { Data = null, Success = true };
             }
@@ -215,6 +221,13 @@ namespace DisCache.Hubs
             {
                 await _statisticManager.StatisticEvent("Request");
                 //_statisticManager.StatisticEvent(StatisticsType.);
+
+                if (Configuration.UseMemoryCacheAccelerator)
+                {
+                    // Wenn der InMemory-Accelerator aktiviert ist, erst mal darein schauen.
+                    _memoryCache.Get(key);
+                }
+
                 await _service.RefreshAsync(key);
 
                 return new SignalRResponse() { Data = null, Success = true };

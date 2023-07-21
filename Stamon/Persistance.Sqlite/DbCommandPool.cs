@@ -75,7 +75,7 @@ namespace Persistance.Sqlite
                 command.Connection = db;
                 return handler(command);
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
                 throw;
             }

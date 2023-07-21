@@ -63,7 +63,7 @@ namespace DisCacheClient.Extensions.Caching.REST
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
                 return null;
             }

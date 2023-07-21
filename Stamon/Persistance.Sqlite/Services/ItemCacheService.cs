@@ -15,7 +15,7 @@ namespace Persistance.Sqlite.Services
         /// </summary>
         /// <param name="scale"></param>
         /// <returns></returns>
-        public ItemCache? GetLastItemForScale(long scale)
+        public ItemCache GetLastItemForScale(long scale)
         {
             if(_itemCache.TryGetValue(scale, out var cachedItem))
             {

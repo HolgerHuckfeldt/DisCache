@@ -21,6 +21,7 @@ namespace Persistance.Sqlite
 {
     internal class SqliteService : IStamonDatabasePersistance
     {
+        #nullable enable
         public const int SchemaVersion = 1;
 
         private readonly SqliteCacheOptions _config;
@@ -246,15 +247,18 @@ namespace Persistance.Sqlite
 
                             var lastItem = await GetMaxItemFromDb(slotid.Value);
 
-                            var newItem = new ItemCache()
+                            if (lastItem != null)
                             {
-                                Count = lastItem.Count,
-                                SlotId = slotid.Value,
-                                LastInsert = newScaledTime,
-                                ItemId = lastItem.ItemId
-                            };
+                                var newItem = new ItemCache()
+                                {
+                                    Count = lastItem.Count,
+                                    SlotId = slotid.Value,
+                                    LastInsert = newScaledTime,
+                                    ItemId = lastItem.ItemId
+                                };
 
-                            _itemService.AddScaleItem(newItem);
+                                _itemService.AddScaleItem(newItem);
+                            }
                         }
                     }
                 }
@@ -294,28 +298,30 @@ namespace Persistance.Sqlite
                             cmd.ExecuteNonQuery();
                         });
 
-                        var lastItem = await GetMaxItemFromDb(slotid.Value);
+                        var lastItem = await GetMaxItemFromDb(newSlotid.Value);
 
-                        var newItem = new ItemCache()
+                        if (lastItem != null)
                         {
-                            Count = lastItem.Count,
-                            SlotId = slotid.Value,
-                            LastInsert = lastItem.LastInsert,
-                            ItemId = lastItem.ItemId
-                        };
-
-                        _itemService.AddScaleItem(newItem);
+                            var newItem = new ItemCache()
+                            {
+                                Count = lastItem.Count,
+                                SlotId = newSlotid.Value,
+                                LastInsert = lastItem.LastInsert,
+                                ItemId = lastItem.ItemId
+                            };
+                            _itemService.AddScaleItem(newItem);
+                        }
 
                     }
                     catch (Exception ex)
                     {
-
+                        _logger.LogError(ex, $"Error adding monitor: {monitor.Name}");
                     }
                 }
             }
             catch (Exception ex)
             {
-
+               _logger.LogError(ex, $"Error adding monitor: {monitor.Name}");
             }
         }
 
@@ -348,7 +354,7 @@ namespace Persistance.Sqlite
 
                     LinkedList<ActionPerTime> result = new LinkedList<ActionPerTime>();
 
-                    ActionPerTime lastItem = null;
+                    ActionPerTime? lastItem = null;
 
                     while (reader.Read())
                     {
@@ -407,7 +413,7 @@ namespace Persistance.Sqlite
         }
 
 
-        private async Task<long?> GetSlotId(Monitor monitor)
+        private Task<long?> GetSlotId(Monitor monitor)
         {
             var slotid = (long?)Commands.Use(Operation.GetSlot, cmd =>
             {
@@ -416,10 +422,14 @@ namespace Persistance.Sqlite
                 return cmd.ExecuteScalar();
             })!;
 
-            return slotid??1;
+            if (slotid != null)
+            {
+                return Task.FromResult(slotid);
+            }
+            return Task.FromResult(1 as long?);
         }
 
-        private async Task<ItemCache> GetMaxItemFromDb(long slotId)
+        private async Task<ItemCache?> GetMaxItemFromDb(long slotId)
         {
             // Get Item from Database.
             var itemdata = await(Task<ItemCache?>)Commands.Use(Operation.GetItem, async cmd =>
@@ -435,14 +445,15 @@ namespace Persistance.Sqlite
                         if (!reader.IsDBNull(0))
                             dt = reader.GetDateTime(0);
 
-                        reader.Close();
                         if (dt != null)
                         {
                             long? count = (long)reader[1];
                             long? id = (long)reader[2];
+
+                            reader.Close();
                             return new ItemCache() { Count = count.Value, LastInsert = dt.Value, ItemId = id.Value };
                         }
-
+                        reader.Close();
                         return null;
                     }
                 }

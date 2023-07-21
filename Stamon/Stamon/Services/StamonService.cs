@@ -20,11 +20,10 @@ namespace Stamon.Services
         private readonly IStamonMemoryPersistance _storeMemory;
         private readonly IOptions<StarisConfig> _slotConfig;
         private readonly Dictionary<string, StamonSlot> _slots = new();
-        private bool _doForward;
-        private string _forwardTo;
+        private readonly string _forwardTo;
 
-        private ConcurrentQueue<string> _forwards = new ConcurrentQueue<string>();
-        private System.Timers.Timer forwardTimer;
+        private readonly ConcurrentQueue<string> _forwards = new ConcurrentQueue<string>();
+        //private System.Timers.Timer forwardTimer;
 
         private object _lock = new object();
 
@@ -40,7 +39,7 @@ namespace Stamon.Services
             _logger = logger;
 
             _forwardTo = slotConfig.Value.Forward;
-            _doForward = slotConfig.Value.DoForward;
+            var doForward = slotConfig.Value.DoForward;
 
             if (_slotConfig.Value is { Provider: { } } && _slotConfig.Value.Provider.Any())
             {
@@ -56,7 +55,7 @@ namespace Stamon.Services
                 _slots.Add("default", new StamonSlot(Scale.Second, 120, _storeMemory));
             }
 
-            if (_doForward)
+            if (doForward)
             {
                 //forwardTimer = new System.Timers.Timer();
                 //forwardTimer.Interval = 2000;
@@ -198,7 +197,7 @@ namespace Stamon.Services
 
         public void Dispose()
         {
-            forwardTimer?.Dispose();
+            //forwardTimer?.Dispose();
         }
     }
 }

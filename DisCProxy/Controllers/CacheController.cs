@@ -33,9 +33,9 @@ namespace DisCProxy.Controllers
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [Route("Ping")]
-        public async Task<ActionResult> Ping()
+        public Task<ActionResult> Ping()
         {
-            return Ok("Pong");
+            return Task.FromResult(Ok("Pong") as ActionResult);
         }
 
         /// <summary>

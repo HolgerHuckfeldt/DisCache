@@ -44,8 +44,6 @@ namespace DisCache
             DisCache.Configuration.DbPath = Configuration.GetValue<string>("DisC:DbPath");
 
 
-
-
             bool useInMemory = Configuration.GetValue<bool>("CacheBackend:UseInMemory");
             DisCache.Configuration.UseMemoryCacheAccelerator = Configuration.GetValue<bool>("CacheBackend:UseInMemoryAccelerator");
             DisCache.Configuration.UseMemoryCacheAcceleratorTime = Configuration.GetValue<int>("CacheBackend:UseInMemoryAcceleratorTime");
@@ -128,6 +126,8 @@ namespace DisCache
 
             services.AddSingleton<IStamonMemoryPersistance, PersistanceService>();
 
+            services.AddSingleton<CacheCore>();
+
             services.AddSingleton<KeyService>();
 
             if (UseAuthorisation)
@@ -164,7 +164,7 @@ namespace DisCache
                 using var db = new DiscContext();
                 db.Database.Migrate();
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
                 
             }

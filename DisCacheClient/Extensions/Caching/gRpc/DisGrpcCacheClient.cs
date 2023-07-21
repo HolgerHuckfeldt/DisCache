@@ -13,15 +13,12 @@ namespace DisCacheClient.Extensions.Caching.gRpc
     public class DisGrpcCacheClient : IDistributedCache, IDiscCacheClient
     {
 
-        private readonly string _baseUrl;
         private readonly DisCacher.DisCacherClient _grpClient;
-        private readonly GrpcChannel _channel;
 
         public DisGrpcCacheClient(string baseUrl)
         {
-            _baseUrl = baseUrl;
-            _channel = GrpcChannel.ForAddress(baseUrl);
-            _grpClient = new DisCacher.DisCacherClient(_channel);
+            var channel = GrpcChannel.ForAddress(baseUrl);
+            _grpClient = new DisCacher.DisCacherClient(channel);
         }
 
         public bool IsReady()

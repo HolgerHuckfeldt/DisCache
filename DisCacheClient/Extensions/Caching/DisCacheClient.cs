@@ -90,7 +90,7 @@ namespace DisCacheClient.Extensions.Caching
             finally
             {
                 sw.Stop();
-                var tt = sw.ElapsedMilliseconds;
+                //var tt = sw.ElapsedMilliseconds;
                 
             }
             return null;

@@ -9,7 +9,7 @@ namespace DisCache.DistributedInMemory.Cache
 {
     public class MemoryDistributedCache : IDistributedCache
     {
-        private static readonly Task CompletedTask = Task.FromResult<object>(null);
+        private static readonly Task CompletedTask = Task.FromResult<object?>(null);
 
         private readonly IMemoryCache _memCache;
 
@@ -23,17 +23,17 @@ namespace DisCache.DistributedInMemory.Cache
             _memCache = new MemoryCache(options.Value);
         }
 
-        public byte[] Get(string key)
+        public byte[]? Get(string key)
         {
             if (key == null)
             {
                 throw new ArgumentNullException(nameof(key));
             }
 
-            return (byte[])_memCache.Get(key);
+            return (byte[]?)_memCache.Get(key);
         }
 
-        public Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default)
         {
             if (key == null)
             {
@@ -104,7 +104,9 @@ namespace DisCache.DistributedInMemory.Cache
                 throw new ArgumentNullException(nameof(key));
             }
 
-            _memCache.TryGetValue(key, out object value);
+            #pragma warning disable IDE0059 // Unnötige Zuweisung eines Werts.
+            _memCache.TryGetValue(key, out object? value);
+            #pragma warning restore IDE0059 // Unnötige Zuweisung eines Werts.
         }
 
         public Task RefreshAsync(string key, CancellationToken token = default)
