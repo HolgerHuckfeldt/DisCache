@@ -1,4 +1,5 @@
-﻿using DisCacheClient.Extensions.Caching.Interfaces;
+﻿using DisCacheClient.Exceptions;
+using DisCacheClient.Extensions.Caching.Interfaces;
 using System.Web;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -63,9 +64,9 @@ namespace DisCacheClient.Extensions.Caching.REST
                     }
                 }
             }
-            catch (Exception /*ex*/)
+            catch (Exception ex)
             {
-                return null;
+                throw new DiscException("Error getting item. See inner exception for details.", ex);
             }
             return null;
         }

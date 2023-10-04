@@ -8,6 +8,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Stamon.Services;
+using System.Diagnostics;
 using System.Text;
 
 namespace DisCache.Hubs
@@ -48,10 +49,10 @@ namespace DisCache.Hubs
         {
             try
             {
-
+                
                 //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
                 //_logger.LogInformation($"Transport={tt}");
-                _logger.LogInformation("SendData {Key}", key);
+                //_logger.LogInformation("SendData {Key}", key);
 
                 await _statisticManager.StatisticEvent("Request");
                 var options = new DistributedCacheEntryOptions();
@@ -91,6 +92,8 @@ namespace DisCache.Hubs
                             SlidingExpiration = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
                         });
                 }
+
+                await Clients.Others.SendAsync("Update", "Update", key);
 
                 return new SignalRResponse() { Data = null, Success = true };
             }
@@ -133,8 +136,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
-                //_logger.LogInformation($"Transport={tt}");
+                Stopwatch sw = new Stopwatch();
 
                 _logger.LogInformation("Get {Key}", key);
 
@@ -160,20 +162,21 @@ namespace DisCache.Hubs
                     ? "Hit"
                     : "Miss");
 
+                sw.Stop();
                 if (returnData != null)
                 {
-                    _logger.LogDebug("Get {Key} - Hit", key);
+                    _logger.LogDebug($"Hub: Get {key} - Hit. {sw.ElapsedMilliseconds} milliseconds.");
                 }
                 else
                 {
-                    _logger.LogDebug("Get {Key} - Fail", key);
+                    _logger.LogDebug($"Hub: Get {key} - Fail. {sw.ElapsedMilliseconds} milliseconds.\"");
                 }
 
                 return new SignalRResponse() { Data = returnData, Success = true };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error");
+                _logger.LogError(ex, "Hub: Error");
                 return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
             }
         }
@@ -201,6 +204,9 @@ namespace DisCache.Hubs
                 }
 
                 await _service.RemoveAsync(key);
+
+                await Clients.All.SendAsync("Update", "Delete", key);
+
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -238,5 +244,7 @@ namespace DisCache.Hubs
                 return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
             }
         }
+
+
     }
 }

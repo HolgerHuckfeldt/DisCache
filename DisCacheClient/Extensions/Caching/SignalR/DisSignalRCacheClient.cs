@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,9 @@ using Timer = System.Timers.Timer;
 #pragma warning disable CS8603 // Mögliche Nullverweisrückgabe.
 namespace DisCacheClient.Extensions.Caching.SignalR
 {
+
+    public delegate void DisCUpdateHandler(object sender, string command, string key);
+
     public class DisSignalRCacheClient : IDistributedCache, IDiscCacheClient
     {
 
@@ -27,6 +31,8 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         private bool _firstCall = true;
 
         private readonly Timer _nextTryTimer;
+
+        public event DisCUpdateHandler? DisCUpdate;
 
         public DisSignalRCacheClient(string baseUrl)
         {
@@ -83,21 +89,27 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
         public byte[]? Get(string key)
         {
-            if (!_connected)
+            try
             {
-                var t = Connect();
-                t.Wait();
-            }
+                if (!_connected)
+                {
+                    var t = Connect();
+                    t.Wait();
+                }
 
-            if (_connection.InvokeCoreAsync(
-                    "Get",
-                    typeof(SignalRResponse),
-                    new object?[] { key }
-                ).Result is SignalRResponse r)
+                if (_connection.InvokeCoreAsync(
+                        "Get",
+                        typeof(SignalRResponse),
+                        new object?[] { key }
+                    ).Result is SignalRResponse r)
+                {
+                    return r.Data;
+                }
+            }
+            catch (Exception ex)
             {
-                return r.Data;
+                throw new DiscException("Error getting item. See inner exception for details.", ex);
             }
-
 
             return null;
 
@@ -105,171 +117,204 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
         public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
         {
-            if (!_connected)
-                await Connect();
+            try
+            {
+                if (!_connected)
+                    await Connect();
 
-            var r = await _connection.InvokeCoreAsync(
-                "Get",
-                typeof(SignalRResponse),
-                new object?[]
-                {
-                    key
-                }
-            ) as SignalRResponse;
+                var r = await _connection.InvokeCoreAsync(
+                    "Get",
+                    typeof(SignalRResponse),
+                    new object?[] { key }
+                ) as SignalRResponse;
 
 
-            return r?.Data;
+                return r?.Data;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error getting item. See inner exception for details.", ex);
+            }
+            
         }
 
         public async Task<byte[]> PingAsync(CancellationToken token = default)
         {
-            if (!_connected)
-                await Connect();
+            try
+            {
+                if (!_connected)
+                    await Connect();
 
-            var r = await _connection.InvokeCoreAsync(
-                "Ping",
-                typeof(SignalRResponse),
-                new object?[]
-                {
-                    "Ping"
-                }
-            ) as SignalRResponse;
+                var r = await _connection.InvokeCoreAsync(
+                    "Ping",
+                    typeof(SignalRResponse),
+                    new object?[] { "Ping" }
+                ) as SignalRResponse;
 
 
-            return r?.Data;
+                return r?.Data;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error pinging server. See inner exception for details.", ex);
+            }
         }
 
         public void Refresh(string key)
         {
-            if (!_connected)
+            try
             {
-                var t = Connect();
-                t.Wait();
-            }
-
-            var r = _connection.InvokeCoreAsync(
-                "Refresh",
-                typeof(SignalRResponse),
-                args: new object?[]
+                if (!_connected)
                 {
-                    key
+                    var t = Connect();
+                    t.Wait();
                 }
-            ).Result;
 
+                var r = _connection.InvokeCoreAsync(
+                    "Refresh",
+                    typeof(SignalRResponse),
+                    args: new object?[] { key }
+                ).Result;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error refreshing item. See inner exception for details.", ex);
+            }
         }
 
         public async Task RefreshAsync(string key, CancellationToken token = default)
         {
-            if (!_connected)
-                await Connect();
+            try
+            {
 
-            var r = await _connection.InvokeCoreAsync(
-                "Refresh",
-                typeof(SignalRResponse),
-                new object?[]
-                {
-                    key
-                }
-            );
+                if (!_connected)
+                    await Connect();
+
+                var r = await _connection.InvokeCoreAsync(
+                    "Refresh",
+                    typeof(SignalRResponse),
+                    new object?[] { key }
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error refreshing item. See inner exception for details.", ex);
+            }
         }
 
         public void Remove(string key)
         {
-            if (!_connected)
+            try
             {
-                var t = Connect();
-                t.Wait();
-            }
-            var r = _connection.InvokeCoreAsync(
-                "Remove",
-                typeof(SignalRResponse),
-                new object?[]
+
+
+                if (!_connected)
                 {
-                    key
+                    var t = Connect();
+                    t.Wait();
                 }
-            ).Result;
+
+                var r = _connection.InvokeCoreAsync(
+                    "Remove",
+                    typeof(SignalRResponse),
+                    new object?[] { key }
+                ).Result;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error removing item. See inner exception for details.", ex);
+            }
         }
 
-        public async Task RemoveAsync(string key, CancellationToken token = default)
+        public async Task RemoveAsync(string key, CancellationToken ct = default)
         {
-            if (!_connected)
-                await Connect();
+            try
+            {
 
-            var r = await _connection.InvokeCoreAsync(
-                "Remove",
-                typeof(SignalRResponse),
-                new object?[]
-                {
-                    key
-                }
-            );
+                if (!_connected)
+                    await Connect();
+
+                var r = await _connection.InvokeCoreAsync(
+                    "Remove",
+                    typeof(SignalRResponse),
+                    new object?[] { key },
+                    ct
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error removing item. See inner exception for details.", ex);
+            }
         }
 
         public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
         {
-            if (!_connected)
+            try
             {
-                var t = Connect();
-                t.Wait();
-            }
-            var cacheOptions = new CacheOptions()
-            {
-                AbsoluteExpiration = options.AbsoluteExpiration?.DateTime ?? null,
-                AbsoluteExpirationRelativeToNow =
-                    options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? null,
-                SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? null
-            };
 
-            var result = _connection.InvokeCoreAsync(
-                "SendData",
-                typeof(SignalRResponse),
-                new object?[]
+                if (!_connected)
                 {
-                    key,
-                    value,
-                    cacheOptions
+                    var t = Connect();
+                    t.Wait();
                 }
-            );
 
-            var response = result.Result;
+                var cacheOptions = new CacheOptions()
+                {
+                    AbsoluteExpiration = options.AbsoluteExpiration?.DateTime ?? null,
+                    AbsoluteExpirationRelativeToNow =
+                        options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? null,
+                    SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? null
+                };
+
+                /*var result = */ _connection.InvokeCoreAsync(
+                    "SendData",
+                    typeof(SignalRResponse),
+                    new object?[] { key, value, cacheOptions }
+                );
+
+                //var response = result.Result;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error setting item. See inner exception for details.", ex);
+            }
         }
 
         public async Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
         {
-            if (!_connected)
-                await Connect();
-
-            var cacheOptions = new CacheOptions()
+            try
             {
-                AbsoluteExpiration = options.AbsoluteExpiration?.DateTime ?? null,
-                AbsoluteExpirationRelativeToNow =
-                    options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? null,
-                SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? null
-            };
 
-            await _connection.InvokeCoreAsync(
-                "SendData",
-                typeof(SignalRResponse),
-                new object?[]
+                if (!_connected)
+                    await Connect();
+
+                var cacheOptions = new CacheOptions()
                 {
-                    key,
-                    value,
-                    cacheOptions
-                },
-                token);
+                    AbsoluteExpiration = options.AbsoluteExpiration?.DateTime ?? null,
+                    AbsoluteExpirationRelativeToNow =
+                        options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? null,
+                    SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? null
+                };
 
+                await _connection.InvokeCoreAsync(
+                    "SendData",
+                    typeof(SignalRResponse),
+                    new object?[] { key, value, cacheOptions },
+                    token);
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error setting item. See inner exception for details.", ex);
+            }
         }
+
+
         private async Task Connect()
         {
 
-            _connection.On<string, string>("ReceiveMessage", (user, message) =>
+            _connection.On<string, string>("Update", (command, key) =>
             {
-                string msg = message;
-            });
-
-            _connection.On<string, byte[]>("ReceiveData", (user, data) =>
-            {
-                byte[] mydata = data;
+                DisCUpdate?.Invoke(this, command, key);
             });
 
             //_connection.HandshakeTimeout = TimeSpan.FromSeconds(10);
@@ -291,9 +336,9 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 // Network-Exception. Retry...
                 _nextTryTimer.Start();
             }
-            catch (Exception /*ex*/)
+            catch (Exception ex)
             {
-
+                throw new DiscException("Error connecting to SignalR-Host. See inner exception for details.", ex);
             }
         }
 

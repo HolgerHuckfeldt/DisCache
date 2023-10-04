@@ -1,17 +1,11 @@
-﻿using DisCache.Protos;
+﻿using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
-using System.IO;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using DisCacheClient.Extensions.Caching.REST;
 using DisCacheClient.Extensions.Caching.SignalR;
-using Google.Protobuf;
-using Grpc.Net.Client;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
@@ -83,7 +77,7 @@ namespace DisCacheClient.Extensions.Caching
                     return _distributedFallbackCache.Get(key);
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -111,7 +105,7 @@ namespace DisCacheClient.Extensions.Caching
                     return await _distributedFallbackCache.GetAsync(key, token);
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -136,7 +130,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -159,7 +153,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -183,7 +177,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -206,7 +200,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -229,7 +223,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }
@@ -252,7 +246,7 @@ namespace DisCacheClient.Extensions.Caching
                     }
                 }
             }
-            catch (Exception ex)
+            catch (DiscException ex)
             {
                 _logger.LogError(ex, ex.Message);
             }

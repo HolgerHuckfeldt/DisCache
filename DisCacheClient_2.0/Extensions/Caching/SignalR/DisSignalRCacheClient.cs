@@ -1,4 +1,5 @@
-﻿using DisCacheClient.Extensions.Caching.Interfaces;
+﻿using DisCacheClient.Exceptions;
+using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -271,6 +272,11 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 byte[] mydata = data;
             });
 
+            _connection.On<string, string>("Update", (command, key ) =>
+            {
+
+            });
+
             //_connection.HandshakeTimeout = TimeSpan.FromSeconds(10);
             //_connection.ServerTimeout = TimeSpan.FromSeconds(5);
             _connection.Closed += ConnectionOnClosed;
@@ -290,9 +296,9 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 // Network-Exception. Retry...
                 _nextTryTimer.Start();
             }
-            catch (Exception /*ex*/)
+            catch (Exception ex)
             {
-
+                throw new DiscException("Error connecting to SignalR-Host. See inner exception for details.", ex);
             }
         }
 

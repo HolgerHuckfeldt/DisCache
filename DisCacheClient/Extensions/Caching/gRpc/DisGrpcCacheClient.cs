@@ -1,4 +1,5 @@
 ﻿using DisCache.Protos;
+using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using Google.Protobuf;
 using Grpc.Core;
@@ -52,9 +53,9 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                 return grpcResult.Found;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                throw new DiscException("Error in Ping. See inner exception for details.", ex);
             }
         }
 
@@ -66,9 +67,9 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                 return grpcResult.Found;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                throw new DiscException("Error in Ping. See inner exception for details.", ex);
             }
         }
 
