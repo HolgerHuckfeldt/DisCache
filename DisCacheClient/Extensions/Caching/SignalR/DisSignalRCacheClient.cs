@@ -3,15 +3,11 @@ using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Timers;
 using Timer = System.Timers.Timer;
@@ -230,7 +226,6 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         {
             try
             {
-
                 if (!_connected)
                     await Connect();
 

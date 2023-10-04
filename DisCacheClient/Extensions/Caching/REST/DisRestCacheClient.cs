@@ -35,15 +35,22 @@ namespace DisCacheClient.Extensions.Caching.REST
 
         public byte[] Get(string key)
         {
-            var result = _client.GetAsync($"{_baseUrl}api/Cache/{key}").Result;
-
-            if (result.IsSuccessStatusCode)
+            try
             {
-                var cachedValue = result.Content.ReadAsByteArrayAsync().Result;
-                return cachedValue;
-            }
+                var result = _client.GetAsync($"{_baseUrl}api/Cache/{key}").Result;
 
-            return null;
+                if (result.IsSuccessStatusCode)
+                {
+                    var cachedValue = result.Content.ReadAsByteArrayAsync().Result;
+                    return cachedValue;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error getting item. See inner exception for details.", ex);
+            }
         }
 
         public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
@@ -73,9 +80,7 @@ namespace DisCacheClient.Extensions.Caching.REST
 
         public void Refresh(string key)
         {
-
             var result = _client.PutAsync($"{_baseUrl}api/cache/{key}", new StringContent("")).Result;
-
         }
 
         public async Task RefreshAsync(string key, CancellationToken token = default)
