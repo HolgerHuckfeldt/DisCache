@@ -18,14 +18,20 @@ using Timer = System.Timers.Timer;
 #pragma warning disable CS8603 // Mögliche Nullverweisrückgabe.
 namespace DisCacheClient.Extensions.Caching.SignalR
 {
+    public delegate void DisCUpdateHandler(object sender, string key);
+    public delegate void DisCDeleteHandler(object sender, string key);
+
     public class DisSignalRCacheClient : IDistributedCache, IDiscCacheClient
     {
         private readonly HubConnection _connection;
         private bool _connected;
-        private bool _initialized = false;
+        //private bool _initialized = false;
         private bool _firstCall = true;
 
         private readonly Timer _nextTryTimer;
+
+        public event DisCUpdateHandler DisCUpdate;
+        public event DisCDeleteHandler DisCDelete;
 
         public DisSignalRCacheClient(string baseUrl)
         {
@@ -262,19 +268,17 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         private async Task Connect()
         {
 
-            _connection.On<string, string>("ReceiveMessage", (user, message) =>
+            _connection.On<string, string>("Update", (command, key) =>
             {
-                string msg = message;
-            });
-
-            _connection.On<string, byte[]>("ReceiveData", (user, data) =>
-            {
-                byte[] mydata = data;
-            });
-
-            _connection.On<string, string>("Update", (command, key ) =>
-            {
-
+                switch (command)
+                {
+                    case "Update":
+                        DisCUpdate?.Invoke(this, key);
+                        break;
+                    case "Delete":
+                        DisCDelete?.Invoke(this, key);
+                        break;
+                }
             });
 
             //_connection.HandshakeTimeout = TimeSpan.FromSeconds(10);
@@ -285,7 +289,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
             try
             {
-                _initialized = true;
+                //_initialized = true;
 
                 await _connection.StartAsync();
                 _nextTryTimer.Stop();

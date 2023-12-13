@@ -16,7 +16,8 @@ using Timer = System.Timers.Timer;
 namespace DisCacheClient.Extensions.Caching.SignalR
 {
 
-    public delegate void DisCUpdateHandler(object sender, string command, string key);
+    public delegate void DisCUpdateHandler(object sender, string key);
+    public delegate void DisCDeleteHandler(object sender, string key);
 
     public class DisSignalRCacheClient : IDistributedCache, IDiscCacheClient
     {
@@ -29,6 +30,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         private readonly Timer _nextTryTimer;
 
         public event DisCUpdateHandler? DisCUpdate;
+        public event DisCDeleteHandler? DisCDelete;
 
         public DisSignalRCacheClient(string baseUrl)
         {
@@ -309,7 +311,15 @@ namespace DisCacheClient.Extensions.Caching.SignalR
 
             _connection.On<string, string>("Update", (command, key) =>
             {
-                DisCUpdate?.Invoke(this, command, key);
+                switch (command)
+                {
+                    case "Update":
+                        DisCUpdate?.Invoke(this, key);
+                        break;
+                    case "Delete":
+                        DisCDelete?.Invoke(this, key);
+                        break;
+                }
             });
 
             //_connection.HandshakeTimeout = TimeSpan.FromSeconds(10);

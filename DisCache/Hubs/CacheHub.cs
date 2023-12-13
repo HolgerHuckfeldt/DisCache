@@ -93,7 +93,8 @@ namespace DisCache.Hubs
                         });
                 }
 
-                await Clients.Others.SendAsync("Update", "Update", key);
+                if(DisCacheConfiguration.UseEvents)
+                    await Clients.Others.SendAsync("Update", "Update", key);
 
                 return new SignalRResponse() { Data = null, Success = true };
             }
@@ -205,7 +206,8 @@ namespace DisCache.Hubs
 
                 await _service.RemoveAsync(key);
 
-                await Clients.All.SendAsync("Update", "Delete", key);
+                if (DisCacheConfiguration.UseEvents)
+                    await Clients.All.SendAsync("Update", "Delete", key);
 
                 return new SignalRResponse() { Data = null, Success = true };
             }

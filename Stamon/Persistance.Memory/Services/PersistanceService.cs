@@ -145,7 +145,7 @@ namespace Persistance.Memory.Services
                         {
                             stat.RemoveFirst();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
 
                         }

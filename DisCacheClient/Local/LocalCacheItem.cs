@@ -1,4 +1,5 @@
 ﻿using DisCacheClient.Exceptions;
+using DisCacheClient.Extensions.Caching.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,7 @@ namespace DisCacheClient.Local
     }
 
 
-    public class LocalCacheItem<T> 
+    public class LocalCacheItem<T> : IDisposable
     {
         //private ILogger<LocalCacheItem<T>> _logger;
         private readonly LocalCacheOptions _options;
@@ -38,6 +39,18 @@ namespace DisCacheClient.Local
             _options = options;
             _memoryCache = memoryCache;
             _distributedCache = distributedCache;
+
+            if (distributedCache is Extensions.Caching.DisCacheClient cc)
+            {
+                cc.DisCDelete += DistributedCacheOnDelete;
+                cc.DisCUpdate += DistributedCacheOnDelete;
+            }
+
+        }
+
+        private void DistributedCacheOnDelete(object sender, string key)
+        {
+            _memoryCache?.Remove(key);
         }
 
         public T Get(string key)
@@ -85,7 +98,7 @@ namespace DisCacheClient.Local
             }
             catch (Exception ex)
             {
-                throw new DiscException("Error getting cached item. Look in inner exception for details.", ex);
+                throw new DiscException("Error getting cached item. Inner exception for details.", ex);
             }
 
             return default(T);
@@ -230,6 +243,15 @@ namespace DisCacheClient.Local
             if (_options.SecondsRemote > 0)
             {
                 await _distributedCache.RemoveAsync(key);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_distributedCache is Extensions.Caching.DisCacheClient cc)
+            {
+                cc.DisCDelete -= DistributedCacheOnDelete;
+                cc.DisCUpdate -= DistributedCacheOnDelete;
             }
         }
     }

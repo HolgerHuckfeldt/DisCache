@@ -6,13 +6,9 @@ using Stamon.Types.Model;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Resources;
-using System.Text;
 using System.Threading.Tasks;
 using DbConnection = Microsoft.Data.Sqlite.SqliteConnection;
 using DbCommand = Microsoft.Data.Sqlite.SqliteCommand;
-using System.Threading;
 using Persistance.Sqlite.Services;
 using Monitor = Stamon.Types.Model.Monitor;
 using System.Linq;
@@ -183,7 +179,7 @@ namespace Persistance.Sqlite
 
         #endregion
 
-        public async Task AddMonitor(Stamon.Types.Model.Monitor monitor)
+        public async Task AddMonitor(Monitor monitor)
         {
             try
             {
@@ -325,7 +321,7 @@ namespace Persistance.Sqlite
             }
         }
 
-        public async Task<ICollection<ActionPerTime>> GetMonitor(Stamon.Types.Model.Monitor monitor)
+        public async Task<ICollection<ActionPerTime>> GetMonitor(Monitor monitor)
         {
             return await GetMonitor(
                 monitor,
@@ -333,7 +329,7 @@ namespace Persistance.Sqlite
                 GetScaledTime(monitor.Scale, DateTime.Now, 0));
         }
 
-        public async Task<ICollection<ActionPerTime>> GetMonitor(Stamon.Types.Model.Monitor monitor, DateTime from, DateTime to)
+        public async Task<ICollection<ActionPerTime>> GetMonitor(Monitor monitor, DateTime from, DateTime to)
         {
             var slotid = (long?)Commands.Use(Operation.GetSlot, cmd =>
             {
@@ -344,7 +340,7 @@ namespace Persistance.Sqlite
 
             if (slotid != null)
             {
-                var itemdata = await(Task<LinkedList<ActionPerTime>>)Commands.Use(Operation.GetItemWithDate, async cmd =>
+                var itemdata = await Commands.Use(Operation.GetItemWithDate, async cmd =>
                 {
                     cmd.Parameters.AddWithValue("@slot", slotid.Value);
                     cmd.Parameters.AddWithValue("@from", from);
@@ -415,18 +411,18 @@ namespace Persistance.Sqlite
 
         private Task<long?> GetSlotId(Monitor monitor)
         {
-            var slotid = (long?)Commands.Use(Operation.GetSlot, cmd =>
+            long? slotid = (long?)Commands.Use(Operation.GetSlot, cmd =>
             {
                 cmd.Parameters.AddWithValue("@name", monitor.Name);
                 cmd.Parameters.AddWithValue("@scale", monitor.Scale);
                 return cmd.ExecuteScalar();
-            })!;
+            });
 
-            if (slotid != null)
+            if (slotid == null)
             {
-                return Task.FromResult(slotid);
+                return Task.FromResult<long?>(1);
             }
-            return Task.FromResult(1 as long?);
+            return Task.FromResult(slotid);
         }
 
         private async Task<ItemCache?> GetMaxItemFromDb(long slotId)
@@ -544,7 +540,7 @@ namespace Persistance.Sqlite
             var startDate = GetScaledTime(scale, DateTime.Now, duration);
 
             // Größtes Datum in der Liste.
-            var endDate = GetScaledTime(scale, DateTime.Now, 0);
+            var endDate = GetScaledTime(scale, DateTime.Now);
 
             // von hinten nach vorne.
             if (itemList.Count == 0)
@@ -560,33 +556,43 @@ namespace Persistance.Sqlite
             using var enumerator = itemList.Reverse().GetEnumerator();
             enumerator.MoveNext();
             var item = enumerator.Current;
-            var scaledItemTime = GetScaledTime(scale, item.Time);
-
-            long idx = duration;
-            var topItem = endDate;
-            while (idx > 0)
+            if (item != null)
             {
-                if (scaledItemTime < topItem)
+                var scaledItemTime = GetScaledTime(scale, item.Time);
+
+                long idx = duration;
+                var topItem = endDate;
+                while (idx > 0)
                 {
-                    result.AddFirst(new ActionPerTime() { Count = 0, Time = topItem });
-                    topItem = DecrementScaledTime(scale, topItem);
-                }
-                else
-                {
-                    result.AddFirst(item);
-                    topItem = DecrementScaledTime(scale, topItem);
-                    if (enumerator.MoveNext())
+                    if (scaledItemTime < topItem)
                     {
-                        item = enumerator.Current;
-                        scaledItemTime = GetScaledTime(scale, item.Time);
+                        result.AddFirst(new ActionPerTime() { Count = 0, Time = topItem });
+                        topItem = DecrementScaledTime(scale, topItem);
                     }
                     else
                     {
-                        break;
-                    }
-                }
+                        if (item != null)
+                        {
+                            result.AddFirst(item);
+                        }
 
-                idx--;
+                        topItem = DecrementScaledTime(scale, topItem);
+                        if (enumerator.MoveNext())
+                        {
+                            item = enumerator.Current;
+                            if (item != null)
+                            {
+                                scaledItemTime = GetScaledTime(scale, item.Time);
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    idx--;
+                }
             }
 
             return result;

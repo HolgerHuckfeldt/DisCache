@@ -51,7 +51,7 @@ namespace DisCProxy.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [Route("{key}")]
-        public async Task<ActionResult> Get(string key)
+        public async Task<ActionResult> Get([FromRoute]string key)
         {
             var result = await _service.GetAsync(key);
             if (result == null)
@@ -80,7 +80,7 @@ namespace DisCProxy.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
 
@@ -112,7 +112,7 @@ namespace DisCProxy.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -181,7 +181,7 @@ namespace DisCProxy.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -209,7 +209,7 @@ namespace DisCProxy.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -239,7 +239,7 @@ namespace DisCProxy.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }

@@ -40,9 +40,11 @@ namespace DisCache
             bool useRest = Configuration.GetValue<bool>("DisC:UseRest");
             bool useGrpc = Configuration.GetValue<bool>("DisC:UsegRpc");
             bool useSignalR = Configuration.GetValue<bool>("DisC:UseSignalR");
+            bool useEvents = Configuration.GetValue<bool>("DisC:Events");
             UseAuthorisation = Configuration.GetValue<bool>("DisC:UseAuthorisation");
             DisCache.Configuration.DbPath = Configuration.GetValue<string>("DisC:DbPath");
 
+            DisCacheConfiguration.UseEvents = useEvents;
 
             bool useInMemory = Configuration.GetValue<bool>("CacheBackend:UseInMemory");
             DisCache.Configuration.UseMemoryCacheAccelerator = Configuration.GetValue<bool>("CacheBackend:UseInMemoryAccelerator");

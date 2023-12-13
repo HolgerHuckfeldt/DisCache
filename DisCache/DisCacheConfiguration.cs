@@ -4,6 +4,9 @@
 
     public class DisCacheConfiguration
     {
+
+        public static bool UseEvents { get; set; } = false;
+
         /// <summary>
         /// Mandatory name of the cache
         /// </summary>

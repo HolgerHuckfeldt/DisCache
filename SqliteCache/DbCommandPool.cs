@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -54,7 +54,7 @@ namespace NeoSmart.Caching.Sqlite
         {
             if (!_connections.TryTake(out var db))
             {
-                _logger.LogTrace("Adding a new connection to the connection pool", type);
+                _logger.LogTrace($"Adding a new connection to the connection pool of type {type}");
                 db = new SqliteConnection(_connectionString);
                 _logger.LogTrace("Opening connection to {SqliteCacheDbPath}", _connectionString);
                 db.Open();
@@ -84,7 +84,7 @@ namespace NeoSmart.Caching.Sqlite
         {
             if (!_connections.TryTake(out var db))
             {
-                _logger.LogTrace("Adding a new connection to the connection pool", type);
+                _logger.LogTrace("Adding a new connection to the connection pool of type {type}", type);
                 db = new SqliteConnection(_connectionString);
                 _logger.LogTrace("Opening connection to {SqliteCacheDbPath}", _connectionString);
                 await db.OpenAsync();

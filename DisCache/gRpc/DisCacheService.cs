@@ -67,7 +67,7 @@ namespace DisCache.gRpc
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return Task.FromResult(new SetCacheResponse { Result = false });
             }
         }
@@ -94,7 +94,7 @@ namespace DisCache.gRpc
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return Task.FromResult(new GetCacheResponse() { Data = ByteString.Empty, Found = false });
             }
         }
@@ -109,7 +109,7 @@ namespace DisCache.gRpc
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return Task.FromResult(new SetCacheResponse { Result = false });
             }
         }
@@ -123,7 +123,7 @@ namespace DisCache.gRpc
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error", ex);
+                _logger.LogError(ex, "Error");
                 return Task.FromResult(new SetCacheResponse { Result = false });
             }
         }

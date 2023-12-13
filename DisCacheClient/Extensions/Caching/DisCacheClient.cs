@@ -1,4 +1,5 @@
-﻿using DisCacheClient.Exceptions;
+﻿#nullable enable
+using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
 using System.Threading;
@@ -20,11 +21,14 @@ namespace DisCacheClient.Extensions.Caching
         SignalR
     }
 
-    public class DisCacheClient : IDistributedCache
+    public class DisCacheClient : IDistributedCache, IDisposable
     {
         private readonly IDistributedCache _distributedCache;
         private readonly IDistributedCache _distributedFallbackCache;
         private readonly ILogger<DisCacheClient> _logger;
+
+        public event DisCUpdateHandler? DisCUpdate;
+        public event DisCDeleteHandler? DisCDelete;
 
         public DisCacheClient(
             MemoryDistributedCache memoryCache,
@@ -47,11 +51,16 @@ namespace DisCacheClient.Extensions.Caching
                 case CacheType.REST:
                     _distributedCache = new DisRestCacheClient(_options.Configuration);
                     break;
-                case CacheType.gRpc:
-                    _distributedCache = new gRpc.DisGrpcCacheClient(_options.Configuration);
-                    break;
+                //case CacheType.gRpc:
+                //    _distributedCache = new gRpc.DisGrpcCacheClient(_options.Configuration);
+                //    break;
                 case CacheType.SignalR:
-                    _distributedCache = new DisSignalRCacheClient(_options.Configuration);
+                    var client = new DisSignalRCacheClient(_options.Configuration);
+
+                    client.DisCDelete += Client_DisCDelete;
+                    client.DisCUpdate += Client_DisCUpdate;
+
+                    _distributedCache = client;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -61,7 +70,17 @@ namespace DisCacheClient.Extensions.Caching
 
         private readonly DisCacheOptions _options;
 
-        public byte[] Get(string key)
+        private void Client_DisCDelete(object sender, string key)
+        {
+            DisCDelete?.Invoke(sender, key);
+        }
+
+        private void Client_DisCUpdate(object sender, string key)
+        {
+            DisCUpdate?.Invoke(sender, key);
+        }
+
+        public byte[]? Get(string key)
         {
             var sw = Stopwatch.StartNew();
             try
@@ -85,12 +104,12 @@ namespace DisCacheClient.Extensions.Caching
             {
                 sw.Stop();
                 //var tt = sw.ElapsedMilliseconds;
-                
+
             }
             return null;
         }
 
-        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
         {
             try
             {
@@ -251,5 +270,16 @@ namespace DisCacheClient.Extensions.Caching
                 _logger.LogError(ex, ex.Message);
             }
         }
+
+
+        public void Dispose()
+        {
+            if (_distributedCache is DisSignalRCacheClient client)
+            {
+                client.DisCDelete -= Client_DisCDelete;
+                client.DisCUpdate -= Client_DisCUpdate;
+            }
+        }
+
     }
 }
