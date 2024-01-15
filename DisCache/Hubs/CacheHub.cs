@@ -14,7 +14,7 @@ using System.Text;
 namespace DisCache.Hubs
 {
     /// <summary>
-    /// SignalR implementation of the cache server
+    /// SignalR's implementation of the cache server
     /// </summary>
     public class CacheHub : Hub
     {
@@ -50,9 +50,9 @@ namespace DisCache.Hubs
             try
             {
                 
-                //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
-                //_logger.LogInformation($"Transport={tt}");
-                //_logger.LogInformation("SendData {Key}", key);
+                ////var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
+                ////_logger.LogInformation($"Transport={tt}");
+                ////_logger.LogInformation("SendData {Key}", key);
 
                 await _statisticManager.StatisticEvent("Request");
                 var options = new DistributedCacheEntryOptions();

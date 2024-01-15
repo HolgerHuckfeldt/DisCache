@@ -60,7 +60,7 @@ namespace Persistance.Sqlite
         public void Dispose()
         {
             _logger.LogTrace("Disposing SQLite cache database at {SqliteCacheDbPath}", _config.CachePath);
-            //_cleanupTimer?.Dispose();
+            ///_cleanupTimer?.Dispose();
             Commands.Dispose();
 
             _logger.LogTrace("Closing connection to SQLite database at {SqliteCacheDbPath}", _config.CachePath);
@@ -166,8 +166,8 @@ namespace Persistance.Sqlite
                 cmd.ExecuteNonQuery();
             }
             using (var cmd = new DbCommand(
-                       $"INSERT INTO Meta (Key, Value) " +
-                       $"VALUES " +
+                       "INSERT INTO Meta (Key, Value) " +
+                       "VALUES " +
                        $@"(""version"", {SchemaVersion}), " +
                        $@"(""created"", {DateTimeOffset.UtcNow.Ticks})", db))
             {
