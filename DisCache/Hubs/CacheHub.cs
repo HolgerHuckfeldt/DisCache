@@ -49,14 +49,9 @@ namespace DisCache.Hubs
         {
             try
             {
-                
-                ////var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
-                ////_logger.LogInformation($"Transport={tt}");
-                ////_logger.LogInformation("SendData {Key}", key);
 
                 await _statisticManager.StatisticEvent("Request");
                 var options = new DistributedCacheEntryOptions();
-
 
                 if (cacheOptions != null)
                 {
