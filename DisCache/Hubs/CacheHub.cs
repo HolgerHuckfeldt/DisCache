@@ -88,7 +88,7 @@ namespace DisCache.Hubs
                         });
                 }
 
-                if(DisCacheConfiguration.UseEvents)
+                if (DisCacheConfiguration.UseEvents)
                     await Clients.Others.SendAsync("Update", "Update", key);
 
                 return new SignalRResponse() { Data = null, Success = true };
@@ -165,7 +165,7 @@ namespace DisCache.Hubs
                 }
                 else
                 {
-                    _logger.LogDebug($"Hub: Get {key} - Fail. {sw.ElapsedMilliseconds} milliseconds.\"");
+                    _logger.LogDebug($"Hub: Get {key} - Fail. {sw.ElapsedMilliseconds} milliseconds.");
                 }
 
                 return new SignalRResponse() { Data = returnData, Success = true };
