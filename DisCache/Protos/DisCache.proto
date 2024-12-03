@@ -10,6 +10,7 @@ service DisCacher {
     rpc Ping (GetCacheRequest) returns (GetCacheResponse);
 	rpc Refresh (GetCacheRequest) returns (SetCacheResponse);
 	rpc Remove (GetCacheRequest) returns (SetCacheResponse);
+    rpc SubscribeToPattern(stream SubscriptionRequest) returns (stream UpdateNotification);
 }
 
 message SetCacheRequest {
@@ -39,3 +40,12 @@ message GetCacheResponse {
     string Message = 3;
 } 
 
+message SubscriptionRequest {
+    string pattern = 1;
+    bool subscribe = 2; // true = subscribe, false = unsubscribe
+}
+
+message UpdateNotification {
+    string action = 1;
+    string key = 2;
+}

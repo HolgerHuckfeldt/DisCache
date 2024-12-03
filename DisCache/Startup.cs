@@ -1,4 +1,5 @@
-﻿using DisCache.Database;
+﻿using DisCache.BackgroundTaskQueue;
+using DisCache.Database;
 using DisCache.DistributedInMemory.Cache;
 using DisCache.gRpc;
 using Microsoft.AspNetCore.Builder;
@@ -119,6 +120,14 @@ namespace DisCache
 
             services.AddSingleton<StamonService>();
 
+            services.AddSingleton<IBackgroundTaskQueue>(sp =>
+            {
+                var maxConcurrency = 4; // Hier können Sie die maximale Anzahl gleichzeitiger Aufgaben einstellen
+                return new BackgroundTaskQueue.BackgroundTaskQueue(maxConcurrency);
+            });
+
+            services.AddHostedService<QueuedHostedService>();
+
             string statSqitePath = Configuration.GetValue<string>("Monitor:EF");
 
             services.AddSqliteProvider(options =>
@@ -204,6 +213,7 @@ namespace DisCache
             app.UseAuthorization();
             if (UseAuthorisation)
                 app.UseAuthentication();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<DisCacheService>();
