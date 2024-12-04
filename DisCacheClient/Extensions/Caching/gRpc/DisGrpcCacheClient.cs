@@ -18,7 +18,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
     {
         public class DisGrpcCacheClient : IDistributedCache, IDiscCacheClient, IDisposable
         {
-            private readonly DisCache.Protos. _client;
+            private readonly DisCache.Protos.DisCacher.DisCacherClient _client;
             private readonly ILogger<DisGrpcCacheClient> _logger;
             private readonly GrpcChannel _channel;
 
@@ -34,6 +34,8 @@ namespace DisCacheClient.Extensions.Caching.gRpc
                 // Erstellen Sie den gRPC-Channel
                 _channel = GrpcChannel.ForAddress(configuration);
                 //_client = new CacheService.CacheServiceClient(_channel);
+
+                //var client = DisCacher.Descriptor.
 
                 // Starten Sie die Verbindung und das Abonnement
                 Task.Run(() => StartSubscription());
@@ -94,9 +96,9 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = _client.Get(new GetRequest { Key = key });
+                    var response = _client.Get(new GetCacheRequest() { Key = key });
 
-                    if (response.Success)
+                    if (response.Found)
                     {
                         return response.Data.ToByteArray();
                     }
@@ -117,9 +119,9 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = await _client.GetAsync(new GetRequest { Key = key }, cancellationToken: token);
+                    var response = await _client.GetAsync(new GetCacheRequest { Key = key }, cancellationToken: token);
 
-                    if (response.Success)
+                    if (response.Found)
                     {
                         return response.Data.ToByteArray();
                     }
@@ -140,26 +142,26 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var cacheOptions = new CacheOptions
+                    var cacheOptions = new DisCache.Protos.CacheOptions()
                     {
                         AbsoluteExpiration = options.AbsoluteExpiration?.ToUnixTimeMilliseconds() ?? 0,
                         SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? 0,
                         AbsoluteExpirationRelativeToNow = options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? 0
                     };
 
-                    var request = new SendDataRequest
+                    var request = new SetCacheRequest()
                     {
                         Key = key,
                         Data = Google.Protobuf.ByteString.CopyFrom(value),
-                        CacheOptions = cacheOptions
+                        Options = cacheOptions
                     };
 
-                    var response = _client.SendData(request);
+                    var response = _client.SetAsync(request);
 
-                    if (!response.Success)
-                    {
-                        _logger.LogWarning($"Set fehlgeschlagen: {response.Message}");
-                    }
+                    //if (!response.Res)
+                    //{
+                    //    _logger.LogWarning($"Set fehlgeschlagen: {response.Message}");
+                    //}
                 }
                 catch (Exception ex)
                 {
@@ -171,25 +173,25 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var cacheOptions = new CacheOptions
+                    var cacheOptions = new DisCache.Protos.CacheOptions
                     {
                         AbsoluteExpiration = options.AbsoluteExpiration?.ToUnixTimeMilliseconds() ?? 0,
                         SlidingExpiration = options.SlidingExpiration?.TotalMilliseconds ?? 0,
                         AbsoluteExpirationRelativeToNow = options.AbsoluteExpirationRelativeToNow?.TotalMilliseconds ?? 0
                     };
 
-                    var request = new SendDataRequest
+                    var request = new SetCacheRequest()
                     {
                         Key = key,
                         Data = Google.Protobuf.ByteString.CopyFrom(value),
-                        CacheOptions = cacheOptions
+                        Options = cacheOptions
                     };
 
-                    var response = await _client.SendDataAsync(request, cancellationToken: token);
+                    var response = await _client.SetAsync(request, cancellationToken: token);
 
-                    if (!response.Success)
+                    if (!response.Result)
                     {
-                        _logger.LogWarning($"SetAsync fehlgeschlagen: {response.Message}");
+                        _logger.LogWarning($"SetAsync fehlgeschlagen: {response}");
                     }
                 }
                 catch (Exception ex)
@@ -202,11 +204,11 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = _client.Refresh(new RefreshRequest { Key = key });
+                    var response = _client.Refresh(new GetCacheRequest() { Key = key });
 
-                    if (!response.Success)
+                    if (!response.Result)
                     {
-                        _logger.LogWarning($"Refresh fehlgeschlagen: {response.Message}");
+                        _logger.LogWarning($"Refresh fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -219,11 +221,11 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = await _client.RefreshAsync(new RefreshRequest { Key = key }, cancellationToken: token);
+                    var response = await _client.RefreshAsync(new GetCacheRequest { Key = key }, cancellationToken: token);
 
-                    if (!response.Success)
+                    if (!response.Result)
                     {
-                        _logger.LogWarning($"RefreshAsync fehlgeschlagen: {response.Message}");
+                        _logger.LogWarning($"RefreshAsync fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -236,11 +238,11 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = _client.Remove(new RemoveRequest { Key = key });
+                    var response = _client.Remove(new GetCacheRequest() { Key = key });
 
-                    if (!response.Success)
+                    if (!response.Result)
                     {
-                        _logger.LogWarning($"Remove fehlgeschlagen: {response.Message}");
+                        _logger.LogWarning($"Remove fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -253,11 +255,11 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             {
                 try
                 {
-                    var response = await _client.RemoveAsync(new RemoveRequest { Key = key }, cancellationToken: token);
+                    var response = await _client.RemoveAsync(new GetCacheRequest { Key = key }, cancellationToken: token);
 
-                    if (!response.Success)
+                    if (!response.Result)
                     {
-                        _logger.LogWarning($"RemoveAsync fehlgeschlagen: {response.Message}");
+                        _logger.LogWarning($"RemoveAsync fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
