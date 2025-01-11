@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using DisCacheClient.Exceptions;
+using DisCacheClient.Extensions.Caching.gRpc.DisCacheClient.Extensions.Caching.gRpc;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using System;
 using System.Threading;
@@ -21,7 +22,7 @@ namespace DisCacheClient.Extensions.Caching
         SignalR
     }
 
-    public class DisCacheClient : IDistributedCache, IDisposable
+    public class DisCacheClient : IDistributedCache, IDiscCacheClient, IDisposable
     {
         private readonly IDistributedCache _distributedCache;
         private readonly IDistributedCache _distributedFallbackCache;
@@ -51,9 +52,13 @@ namespace DisCacheClient.Extensions.Caching
                 case CacheType.REST:
                     _distributedCache = new DisRestCacheClient(_options.Configuration);
                     break;
-                //case CacheType.gRpc:
-                //    _distributedCache = new gRpc.DisGrpcCacheClient(_options.Configuration);
-                //    break;
+                case CacheType.gRpc:
+                    var grpcClient = new DisGrpcCacheClient(_options.Configuration);
+                    grpcClient.Subscribe("_test*");
+                    grpcClient.DisCDelete += Client_DisCDelete;
+                    grpcClient.DisCUpdate += Client_DisCUpdate;
+                    _distributedCache = grpcClient;
+                    break;
                 case CacheType.SignalR:
                     var client = new DisSignalRCacheClient(_options.Configuration);
 
@@ -281,5 +286,46 @@ namespace DisCacheClient.Extensions.Caching
             }
         }
 
+        public void Subscribe(string pattern)
+        {
+            if (_distributedCache is IDiscCacheClient cc)
+            {
+                cc.Subscribe(pattern);
+            }
+        }
+
+        public void Unsubscribe(string pattern)
+        {
+            if (_distributedCache is IDiscCacheClient cc)
+            {
+                cc.Unsubscribe(pattern);
+            }
+        }
+
+        public async Task SubscribeAsync(string pattern)
+        {
+            if (_distributedCache is IDiscCacheClient cc)
+            {
+                await cc.SubscribeAsync(pattern);
+            }
+        }
+
+        public async Task UnsubscribeAsync(string pattern)
+        {
+            if (_distributedCache is IDiscCacheClient cc)
+            {
+                await cc.UnsubscribeAsync(pattern);
+            }
+        }
+
+        public bool IsReady()
+        {
+            if (_distributedCache is IDiscCacheClient cc)
+            {
+                return cc.IsReady();
+            }
+
+            return true;
+        }
     }
 }

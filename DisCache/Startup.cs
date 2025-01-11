@@ -73,7 +73,13 @@ namespace DisCache
                 });
             });
 
-            services.AddMemoryCache();
+            services.AddMemoryCache(
+                options =>
+                {
+                    //options.TrackStatistics = true;
+                    //options.SizeLimit = 1024 * 1025 * 50; // 50mb
+                }
+                );
 
             if (useInMemory)
             {
@@ -138,8 +144,9 @@ namespace DisCache
             services.AddSingleton<IStamonMemoryPersistance, PersistanceService>();
 
             services.AddSingleton<CacheCore>();
-
             services.AddSingleton<KeyService>();
+
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Startup>());
 
             if (UseAuthorisation)
             {
@@ -150,7 +157,6 @@ namespace DisCache
             if (useRest)
             {
                 services.AddControllers();
-
                 services.AddSwaggerGen(c =>
                 {
                     c.SwaggerDoc("v1", new OpenApiInfo { Title = "DisCache", Version = "v1" });
@@ -158,7 +164,10 @@ namespace DisCache
             }
 
             if (useGrpc)
+            {
                 services.AddGrpc();
+                //services.AddGrpcReflection();
+            }
 
             if (useSignalR)
                 services.AddSignalR(
@@ -177,7 +186,7 @@ namespace DisCache
             }
             catch (Exception /*ex*/)
             {
-                
+
             }
         }
 
@@ -216,7 +225,8 @@ namespace DisCache
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<DisCacheService>();
+                endpoints.MapGrpcService<GprsCacheService>();
+                //endpoints.MapGrpcReflectionService();
                 endpoints.MapControllers();
                 endpoints.MapHub<CacheHub>("/CacheHub");
             });

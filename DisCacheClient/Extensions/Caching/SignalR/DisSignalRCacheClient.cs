@@ -204,8 +204,6 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         {
             try
             {
-
-
                 if (!_connected)
                 {
                     var t = Connect();
@@ -305,6 +303,77 @@ namespace DisCacheClient.Extensions.Caching.SignalR
             }
         }
 
+        public void Subscribe(string key)
+        {
+            try
+            {
+                CheckConnection();
+
+                var r = _connection.InvokeCoreAsync(
+                    "SubscribeToPattern",
+                    typeof(bool),
+                    new object?[] { key }
+                ).Result;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error subscribe item. See inner exception for details.", ex);
+            }
+        }
+
+        public async Task SubscribeAsync(string key)
+        {
+            try
+            {
+                CheckConnection();
+
+                var r = await _connection.InvokeCoreAsync(
+                    "SubscribeToPattern",
+                    typeof(bool),
+                    new object?[] { key }
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error subscribe item. See inner exception for details.", ex);
+            }
+        }
+
+        public void Unsubscribe(string key)
+        {
+            try
+            {
+                CheckConnection();
+
+                var r = _connection.InvokeCoreAsync(
+                    "UnsubscribeFromPattern",
+                    typeof(bool),
+                    new object?[] { key }
+                ).Result;
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error subscribe item. See inner exception for details.", ex);
+            }
+        }
+
+        public async Task UnsubscribeAsync(string key)
+        {
+            try
+            {
+                CheckConnection();
+
+                var r = await _connection.InvokeCoreAsync(
+                    "UnsubscribeFromPattern",
+                    typeof(bool),
+                    new object?[] { key }
+                );
+            }
+            catch (Exception ex)
+            {
+                throw new DiscException("Error subscribe item. See inner exception for details.", ex);
+            }
+        }
 
         private async Task Connect()
         {
@@ -360,6 +429,15 @@ namespace DisCacheClient.Extensions.Caching.SignalR
         private Task ConnectionOnClosed(Exception? arg)
         {
             return Task.CompletedTask;
+        }
+
+        private void CheckConnection()
+        {
+            if (!_connected)
+            {
+                var t = Connect();
+                t.Wait();
+            }
         }
     }
 }

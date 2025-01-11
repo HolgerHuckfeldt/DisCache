@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using DisCacheClient.Extensions.Caching.SignalR;
 
 namespace DisCacheClient.Extensions.Caching.REST
 {
@@ -18,6 +19,9 @@ namespace DisCacheClient.Extensions.Caching.REST
         private readonly HttpClient _client;
         private readonly string _baseUrl;
         private string _jtoken = String.Empty;
+
+        public event DisCUpdateHandler DisCUpdate;
+        public event DisCDeleteHandler DisCDelete;
 
         public DisRestCacheClient(string baseUrl)
         {
@@ -171,6 +175,26 @@ namespace DisCacheClient.Extensions.Caching.REST
         {
             var result = _client.GetAsync($"{_baseUrl}api/cache/Ping").Result;
             return result.IsSuccessStatusCode;
+        }
+
+        public void Subscribe(string pattern)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Unsubscribe(string pattern)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SubscribeAsync(string pattern)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UnsubscribeAsync(string pattern)
+        {
+            throw new NotImplementedException();
         }
     }
 }

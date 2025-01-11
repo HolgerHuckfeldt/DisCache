@@ -1,4 +1,5 @@
 ﻿using DisCacheClient.Exceptions;
+using DisCacheClient.Extensions.Caching.Interfaces;
 using DisCacheClient.Extensions.Caching.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
@@ -19,6 +20,8 @@ namespace DisCacheClient.Local
         public bool UseCache { get; set; }
         public int SecondsLocal { get; set; }
         public int SecondsRemote { get; set; }
+
+        public string Subscribe { get; set; }
     }
 
 
@@ -40,12 +43,15 @@ namespace DisCacheClient.Local
             _memoryCache = memoryCache;
             _distributedCache = distributedCache;
 
-            if (distributedCache is Extensions.Caching.DisCacheClient cc)
+            if (distributedCache is IDiscCacheClient cc)
             {
+                if (!string.IsNullOrEmpty(options.Subscribe))
+                {
+                    cc.Subscribe(options.Subscribe);
+                }
                 cc.DisCDelete += DistributedCacheOnDelete;
                 cc.DisCUpdate += DistributedCacheOnDelete;
             }
-
         }
 
         private void DistributedCacheOnDelete(object sender, string key)
@@ -117,14 +123,11 @@ namespace DisCacheClient.Local
             {
                 string cacheKey = key;
 
-                if (_options.SecondsLocal > 0)
+                if (_options.SecondsLocal > 0 && _memoryCache.TryGetValue<string>(cacheKey, out var cacheVal))
                 {
-                    if (_memoryCache.TryGetValue<string>(cacheKey, out var cacheVal))
+                    if (!string.IsNullOrEmpty(cacheVal))
                     {
-                        if (!string.IsNullOrEmpty(cacheVal))
-                        {
-                            return JsonConvert.DeserializeObject<T>(cacheVal);
-                        }
+                        return JsonConvert.DeserializeObject<T>(cacheVal);
                     }
                 }
 
@@ -245,6 +248,11 @@ namespace DisCacheClient.Local
                 await _distributedCache.RemoveAsync(key);
             }
         }
+
+        //public async Task SubscribeChange(string pattern)
+        //{
+        //    if(_distributedCache is )
+        //}
 
         public void Dispose()
         {

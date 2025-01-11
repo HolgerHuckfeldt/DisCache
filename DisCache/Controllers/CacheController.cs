@@ -20,20 +20,23 @@ namespace DisCache.Controllers
     [ApiController]
     public class CacheController : ControllerBase
     {
-        private readonly IDistributedCache _service;
+        //private readonly IDistributedCache _service;
+        private readonly CacheCore _cacheCore;
         private readonly IMemoryCache _memoryCache;
         private readonly ILogger<CacheController> _logger;
         private readonly StamonService _stamonSlotService;
         private readonly KeyService _keyService;
 
         public CacheController(
+            CacheCore cacheCore,
             IDistributedCache memoryService,
             IMemoryCache memoryCache,
             ILogger<CacheController> logger,
             KeyService keyService,
             StamonService stamonSlotService)
         {
-            _service = memoryService;
+            _cacheCore = cacheCore;
+            //_service = memoryService;
             _memoryCache = memoryCache;
             _logger = logger;
             _keyService = keyService;
@@ -80,19 +83,8 @@ namespace DisCache.Controllers
 
             try
             {
-                if (_keyService.HasAction(key) == KeyAction.Ignore)
-                {
-                    await _stamonSlotService.StatisticEvent("Miss");
-                    return NotFound();
-                }
+                var result = await _cacheCore.GetAsync(key);
 
-                var result = await _service.GetAsync(key);
-                if (result == null)
-                {
-                    await _stamonSlotService.StatisticEvent("Miss");
-                    return NotFound();
-                }
-                await _stamonSlotService.StatisticEvent("Hit");
                 return File(new MemoryStream(result), "application/octet-stream");
             }
             catch (Exception ex)
@@ -124,7 +116,7 @@ namespace DisCache.Controllers
 
             try
             {
-                await _service.RefreshAsync(key);
+                await _cacheCore.RefreshAsync(key);
                 return Ok();
             }
             catch (Exception ex)
@@ -157,8 +149,7 @@ namespace DisCache.Controllers
                     return StatusCode(StatusCodes.Status400BadRequest, "Key must not be empty");
                 }
 
-                await _stamonSlotService.StatisticEvent("Delete");
-                await _service.RemoveAsync(key);
+                await _cacheCore.RemoveAsync(key);
                 return Ok();
             }
             catch (Exception ex)
@@ -216,7 +207,7 @@ namespace DisCache.Controllers
                     }
                 }
 
-                foreach (var file in formData.Files)
+                foreach (var file in formData?.Files)
                 {
                     if (string.IsNullOrEmpty(file.FileName))
                     {
@@ -225,19 +216,7 @@ namespace DisCache.Controllers
                     var buff = ReadFully(file.OpenReadStream());
                     await _stamonSlotService.StatisticEvent("Insert");
 
-                    _logger.LogInformation("Insert key {FileFileName}", file.FileName);
-
-                    if (Configuration.UseMemoryCacheAccelerator)
-                    {
-                        _memoryCache.Set(file.FileName, buff,
-                            new MemoryCacheEntryOptions()
-                            {
-                                AbsoluteExpiration = options.AbsoluteExpiration,
-                                SlidingExpiration = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
-                            });
-                    }
-
-                    await _service.SetAsync(file.FileName, buff, options);
+                    await _cacheCore.SetAsync(file.FileName, buff, options);
                 }
                 return Ok();
             }
@@ -270,17 +249,7 @@ namespace DisCache.Controllers
 
                 var binaryData = Encoding.ASCII.GetBytes(data.Value);
 
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    _memoryCache.Set(data.Key, binaryData,
-                        new MemoryCacheEntryOptions()
-                        {
-                            AbsoluteExpiration = options.AbsoluteExpiration,
-                            SlidingExpiration = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
-                        });
-                }
-
-                await _service.SetAsync(data.Key, binaryData, options);
+                await _cacheCore.SetAsync(data.Key, binaryData, options);
 
                 return Ok();
             }
@@ -307,20 +276,8 @@ namespace DisCache.Controllers
             await _stamonSlotService.StatisticEvent("Request");
             try
             {
-                //var options = new DistributedCacheEntryOptions();
-
-                string result = null;
-
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    // Wenn der InMemory-Accelerator aktiviert ist, erst mal darein schauen.
-                    if (_memoryCache.Get(key) is byte[] binaryResult)
-                    {
-                        result = Encoding.UTF8.GetString(binaryResult, 0, binaryResult.Length);
-                    }
-                }
-
-                result ??= await _service.GetStringAsync(key);
+                var binaryresult = await _cacheCore.GetAsync(key);
+                var result = binaryresult != null ? Encoding.UTF8.GetString(binaryresult, 0, binaryresult.Length) : (string)null;
 
                 if (result != null)
                 {

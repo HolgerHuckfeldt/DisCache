@@ -285,32 +285,26 @@ namespace DisCache.Hubs
 
     public class CacheHub : Hub
     {
-        private readonly IDistributedCache _service;
-        private readonly IMemoryCache _memoryCache;
         private readonly ILogger<CacheHub> _logger;
         private readonly StamonService _statisticManager;
-        private readonly KeyService _keyService;
-        private readonly IBackgroundTaskQueue _taskQueue;
+        private readonly CacheCore _cacheCore;
+
 
         // Verwaltung der Muster und Client-Abonnements
         private static readonly ConcurrentDictionary<string, string> Patterns = new();
         private static readonly ConcurrentDictionary<string, HashSet<string>> ClientPatterns = new();
 
         public CacheHub(
-            IBackgroundTaskQueue taskQueue,
+            CacheCore cacheCore,
             StamonService statisticManager,
-            IDistributedCache service,
-            KeyService keyService,
-            IMemoryCache memoryCache,
             ILogger<CacheHub> logger)
         {
-            _taskQueue = taskQueue;
-            _service = service;
-            _memoryCache = memoryCache;
+            _cacheCore = cacheCore;
             _logger = logger;
-            _keyService = keyService;
             _statisticManager = statisticManager;
         }
+
+        public static ConcurrentDictionary<string, string> KeyPatterns => Patterns;
 
         /// <summary>
         /// Fügt einen Eintrag zum Cache hinzu.
@@ -319,53 +313,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                await _statisticManager.StatisticEvent("Request");
-                var options = new DistributedCacheEntryOptions();
-
-                if (cacheOptions != null)
-                {
-                    options.AbsoluteExpiration = cacheOptions.AbsoluteExpiration;
-
-                    if (cacheOptions.SlidingExpiration.HasValue)
-                    {
-                        options.SlidingExpiration = TimeSpan.FromMilliseconds(cacheOptions.SlidingExpiration.Value);
-                    }
-                    else
-                    {
-                        options.SlidingExpiration = null;
-                    }
-
-                    if (cacheOptions.AbsoluteExpirationRelativeToNow.HasValue)
-                    {
-                        options.AbsoluteExpirationRelativeToNow =
-                            TimeSpan.FromMilliseconds(cacheOptions.AbsoluteExpirationRelativeToNow.Value);
-                    }
-                    else
-                    {
-                        options.SlidingExpiration = null;
-                    }
-                }
-
-                await _statisticManager.StatisticEvent("Insert");
-
-                // Daten in den verteilten Cache schreiben
-                await _service.SetAsync(key, data, options);
-
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    _memoryCache.Set(key, data,
-                        new MemoryCacheEntryOptions()
-                        {
-                            AbsoluteExpiration = options.AbsoluteExpiration,
-                            AbsoluteExpirationRelativeToNow = options.AbsoluteExpirationRelativeToNow,
-                            SlidingExpiration = options.SlidingExpiration
-                        });
-                }
-
-                // Benachrichtige Clients über Änderungen
-                if (DisCacheConfiguration.UseEvents)
-                    await NotifyClientsAsync("Update", key);
-
+                await _cacheCore.SetAsync(key, data, cacheOptions);
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -382,70 +330,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                Stopwatch sw = new();
-                sw.Start();
-
-                _logger.LogInformation("Get {Key}", key);
-
-                await _statisticManager.StatisticEvent("Request");
-
-                if (_keyService.HasAction(key) == KeyAction.Ignore)
-                {
-                    await _statisticManager.StatisticEvent("Miss");
-                    return new SignalRResponse() { Data = null, Success = true };
-                }
-
-                byte[] returnData = null;
-
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    returnData = _memoryCache.Get(key) as byte[];
-
-                    if (returnData != null)
-                    {
-                        if (Configuration.UseQueuedRefresh)
-                        {
-                            // Aufgabe in die Warteschlange stellen
-                            _taskQueue.QueueBackgroundWorkItem(async token =>
-                            {
-                                try
-                                {
-                                    await _service.RefreshAsync(key);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Error refreshing cache key {Key}", key);
-                                }
-                            });
-                        }
-                        else
-                        {
-                            await _service.RefreshAsync(key);
-                        }
-                    }
-                }
-
-                if (returnData == null)
-                {
-                    returnData = await _service.GetAsync(key);
-
-                    if (returnData != null && Configuration.UseMemoryCacheAccelerator)
-                    {
-                        _memoryCache.Set(key, returnData,
-                            new MemoryCacheEntryOptions()
-                            {
-                                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
-                            });
-                    }
-                }
-
-                await _statisticManager.StatisticEvent(returnData != null ? "Hit" : "Miss");
-
-                sw.Stop();
-                _logger.LogDebug(returnData != null
-                    ? $"Hub: Get {key} - Hit. {sw.ElapsedMilliseconds} milliseconds."
-                    : $"Hub: Get {key} - Miss. {sw.ElapsedMilliseconds} milliseconds.");
-
+                var returnData = await _cacheCore.GetAsync(key);
                 return new SignalRResponse() { Data = returnData, Success = true };
             }
             catch (Exception ex)
@@ -462,22 +347,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                _logger.LogDebug("Remove {Key}", key);
-
-                await _statisticManager.StatisticEvent("Request");
-                await _statisticManager.StatisticEvent("Delete");
-
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    _memoryCache.Remove(key);
-                }
-
-                await _service.RemoveAsync(key);
-
-                // Benachrichtige Clients über die Löschung
-                if (DisCacheConfiguration.UseEvents)
-                    await NotifyClientsAsync("Delete", key);
-
+                await _cacheCore.RemoveAsync(key);
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -494,14 +364,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                await _statisticManager.StatisticEvent("Request");
-
-                if (Configuration.UseMemoryCacheAccelerator)
-                {
-                    _memoryCache.Get(key);
-                }
-
-                await _service.RefreshAsync(key);
+                await _cacheCore.RefreshAsync(key);
 
                 return new SignalRResponse() { Data = null, Success = true };
             }
@@ -535,7 +398,7 @@ namespace DisCache.Hubs
         /// <summary>
         /// Abonniert Benachrichtigungen für ein bestimmtes Schlüssel-Muster.
         /// </summary>
-        public async Task SubscribeToPattern(string pattern)
+        public async Task<bool> SubscribeToPattern(string pattern)
         {
             var connectionId = Context.ConnectionId;
 
@@ -545,6 +408,8 @@ namespace DisCache.Hubs
             patterns.Add(pattern);
 
             await Groups.AddToGroupAsync(connectionId, pattern);
+
+            return true;
         }
 
         /// <summary>
@@ -576,6 +441,33 @@ namespace DisCache.Hubs
             await RemoveClientFromPatterns(Context.ConnectionId);
         }
 
+        public override Task OnConnectedAsync()
+        {
+            // SubscriberId könnte z. B. die ConnectionId sein
+            var subscriberId = Context.ConnectionId;
+
+            // Handler registrieren
+            //_eventBroker.SubscribeToUpdates(subscriberId, async (action, key) =>
+            //{
+            //    // Filtern Sie bei Bedarf nach Muster. Falls nötig, kann der Broker bereits gefiltert anliefern.
+            //    // Hier z. B. Clients, die bereits Muster registriert haben:
+            //    if (IsMatch(subscriberId, key))
+            //    {
+            //        await Clients.Caller.SendAsync("Update", action, key);
+            //    }
+            //});
+
+            //_eventBroker.SubscribeToDeletions(subscriberId, async (key) =>
+            //{
+            //    if (IsMatch(subscriberId, key))
+            //    {
+            //        await Clients.Caller.SendAsync("Update", "Delete", key);
+            //    }
+            //});
+
+            return base.OnConnectedAsync();
+        }
+
         private async Task RemoveClientFromPatterns(string connectionId)
         {
             if (ClientPatterns.TryRemove(connectionId, out var patterns))
@@ -592,7 +484,7 @@ namespace DisCache.Hubs
             }
         }
 
-        private bool IsPatternInUseByOtherClients(string pattern)
+        private static bool IsPatternInUseByOtherClients(string pattern)
         {
             return ClientPatterns.Values.Any(p => p.Contains(pattern));
         }
@@ -607,10 +499,10 @@ namespace DisCache.Hubs
             }
         }
 
-        private bool IsMatch(string key, string pattern)
+        private static bool IsMatch(string key, string pattern)
         {
             // Einfaches Präfix-Matching
-            if (pattern.EndsWith("*"))
+            if (pattern.EndsWith('*'))
             {
                 var prefix = pattern.TrimEnd('*');
                 return key.StartsWith(prefix);
@@ -619,6 +511,11 @@ namespace DisCache.Hubs
             {
                 return key == pattern;
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
     }
 }

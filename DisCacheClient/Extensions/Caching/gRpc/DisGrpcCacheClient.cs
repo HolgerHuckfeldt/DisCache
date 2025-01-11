@@ -1,14 +1,12 @@
 ﻿using DisCache.Protos;
-using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
 using DisCacheClient.Extensions.Caching.SignalR;
-using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Net;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +16,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
     {
         public class DisGrpcCacheClient : IDistributedCache, IDiscCacheClient, IDisposable
         {
-            private readonly DisCache.Protos.DisCacher.DisCacherClient _client;
+            private readonly DisCacher.DisCacherClient _client;
             private readonly ILogger<DisGrpcCacheClient> _logger;
             private readonly GrpcChannel _channel;
 
@@ -26,57 +24,142 @@ namespace DisCacheClient.Extensions.Caching.gRpc
             public event DisCDeleteHandler? DisCDelete;
 
             private bool _isReady = false;
+            private AsyncDuplexStreamingCall<SubscriptionRequest, UpdateNotification>? _subscribeCall;
+            private Task? _readTask;
+            private CancellationTokenSource _cts = new CancellationTokenSource();
 
-            public DisGrpcCacheClient(string configuration, ILogger<DisGrpcCacheClient> logger)
+            // Um mehrere Abonnements pro Client zu unterstützen, halten wir ein lokales Verzeichnis der abonnierten Muster.
+            private ConcurrentDictionary<string, bool> _patterns = new ConcurrentDictionary<string, bool>();
+
+            public DisGrpcCacheClient(string configuration)
             {
-                _logger = logger;
+                _logger = null;
 
-                // Erstellen Sie den gRPC-Channel
                 _channel = GrpcChannel.ForAddress(configuration);
-                //_client = new CacheService.CacheServiceClient(_channel);
+                _client = new DisCacher.DisCacherClient(_channel);
 
-                //var client = DisCacher.Descriptor.
-
-                // Starten Sie die Verbindung und das Abonnement
-                Task.Run(() => StartSubscription());
+                // Starten Sie die Verbindung und den Streaming-Call
+                StartSubscription();
             }
 
-            private async Task StartSubscription()
+            private void StartSubscription()
+            {
+                _subscribeCall = _client.SubscribeToPattern(cancellationToken: _cts.Token);
+                _readTask = Task.Run(async () => await ReadUpdatesAsync(_cts.Token));
+                _isReady = true;
+            }
+
+            private async Task ReadUpdatesAsync(CancellationToken token)
             {
                 try
                 {
-                    var cts = new CancellationTokenSource();
-
-                    using var call = _client.SubscribeToPattern(cancellationToken: cts.Token);
-
-                    // Abonnieren Sie das gewünschte Muster, z. B. alle Schlüssel
-                    await call.RequestStream.WriteAsync(new SubscriptionRequest
+                    if (_subscribeCall != null)
                     {
-                        Pattern = "*",
-                        Subscribe = true
-                    });
-
-                    _isReady = true;
-
-                    // Empfangen von Benachrichtigungen
-                    while (await call.ResponseStream.MoveNext(cts.Token))
-                    {
-                        var notification = call.ResponseStream.Current;
-
-                        if (notification.Action == "Update")
+                        while (await _subscribeCall.ResponseStream?.MoveNext(token))
                         {
-                            DisCUpdate?.Invoke(this, notification.Key);
-                        }
-                        else if (notification.Action == "Delete")
-                        {
-                            DisCDelete?.Invoke(this, notification.Key);
+                            var notification = _subscribeCall.ResponseStream.Current;
+                            _logger?.LogInformation("Empfangen: Aktion={Action}, Key={Key}", notification.Action, notification.Key);
+
+                            switch (notification.Action.ToLowerInvariant())
+                            {
+                                case "update":
+                                    DisCUpdate?.Invoke(this, notification.Key);
+                                    break;
+                                case "delete":
+                                    DisCDelete?.Invoke(this, notification.Key);
+                                    break;
+                            }
                         }
                     }
                 }
+                catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+                {
+                    _logger?.LogInformation(ex, "Abonnement wurde abgebrochen.");
+                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Fehler beim Empfangen von Benachrichtigungen.");
+                    _logger?.LogError(ex, "Fehler beim Empfangen von Benachrichtigungen.");
+                }
+                finally
+                {
                     _isReady = false;
+                }
+            }
+
+            public void Subscribe(string pattern)
+            {
+                if (!_isReady || _subscribeCall == null)
+                {
+                    _logger?.LogWarning("Client ist noch nicht bereit.");
+                    return;
+                }
+
+                if (!_patterns.ContainsKey(pattern))
+                {
+                    _patterns[pattern] = true;
+                    SendSubscriptionRequest(pattern, true).GetAwaiter().GetResult();
+                }
+            }
+
+            public async Task SubscribeAsync(string pattern)
+            {
+                if (!_isReady || _subscribeCall == null)
+                {
+                    _logger.LogWarning("Client ist noch nicht bereit.");
+                    return;
+                }
+
+                if (!_patterns.ContainsKey(pattern))
+                {
+                    _patterns[pattern] = true;
+                    await SendSubscriptionRequest(pattern, true);
+                }
+            }
+
+            public void Unsubscribe(string pattern)
+            {
+                if (!_isReady || _subscribeCall == null)
+                {
+                    _logger?.LogWarning("Client ist noch nicht bereit.");
+                    return;
+                }
+
+                if (_patterns.ContainsKey(pattern))
+                {
+                    _patterns.TryRemove(pattern, out _);
+                    SendSubscriptionRequest(pattern, false).GetAwaiter().GetResult();
+                }
+            }
+
+            public async Task UnsubscribeAsync(string pattern)
+            {
+                if (!_isReady || _subscribeCall == null)
+                {
+                    _logger?.LogWarning("Client ist noch nicht bereit.");
+                    return;
+                }
+
+                if (_patterns.ContainsKey(pattern))
+                {
+                    _patterns.TryRemove(pattern, out _);
+                    await SendSubscriptionRequest(pattern, false);
+                }
+            }
+
+            private async Task SendSubscriptionRequest(string pattern, bool subscribe)
+            {
+                try
+                {
+                    await _subscribeCall!.RequestStream.WriteAsync(new SubscriptionRequest
+                    {
+                        Pattern = pattern,
+                        Subscribe = subscribe
+                    });
+                    _logger?.LogInformation($"{(subscribe ? "Abonniere" : "Deabonniere")} Muster: {pattern}");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Fehler beim Senden des SubscriptionRequests für Muster: {Pattern}", pattern);
                 }
             }
 
@@ -87,8 +170,25 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
             public void Dispose()
             {
-                _channel?.Dispose();
+                _cts.Cancel();
+                _cts.Dispose();
+
+                // Completen des RequestStreams, um den Server zu informieren, dass keine weiteren Subscriptions kommen.
+                if (_subscribeCall != null)
+                {
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _subscribeCall.RequestStream.CompleteAsync();
+                        }
+                        catch { /* Ignorieren wir evtl. Fehler beim Dispose */ }
+                    }).GetAwaiter().GetResult();
+                }
+
+                _channel.Dispose();
             }
+
 
             // Implementierung der IDistributedCache-Methoden
 
@@ -104,13 +204,13 @@ namespace DisCacheClient.Extensions.Caching.gRpc
                     }
                     else
                     {
-                        _logger.LogWarning($"Get fehlgeschlagen: {response.Message}");
+                        _logger?.LogWarning("Get fehlgeschlagen: {Message}", response.Message);
                         return null;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Fehler bei Get");
+                    _logger?.LogError(ex, "Fehler bei Get");
                     return null;
                 }
             }
@@ -127,13 +227,13 @@ namespace DisCacheClient.Extensions.Caching.gRpc
                     }
                     else
                     {
-                        _logger.LogWarning($"GetAsync fehlgeschlagen: {response.Message}");
+                        _logger?.LogWarning("GetAsync fehlgeschlagen: {Message}", response.Message);
                         return null;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Fehler bei GetAsync");
+                    _logger?.LogError(ex, "Fehler bei GetAsync");
                     return null;
                 }
             }
@@ -191,7 +291,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                     if (!response.Result)
                     {
-                        _logger.LogWarning($"SetAsync fehlgeschlagen: {response}");
+                        _logger.LogWarning("SetAsync fehlgeschlagen: {Response}", response);
                     }
                 }
                 catch (Exception ex)
@@ -208,7 +308,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                     if (!response.Result)
                     {
-                        _logger.LogWarning($"Refresh fehlgeschlagen");
+                        _logger.LogWarning("Refresh fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -225,7 +325,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                     if (!response.Result)
                     {
-                        _logger.LogWarning($"RefreshAsync fehlgeschlagen");
+                        _logger.LogWarning("RefreshAsync fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -242,7 +342,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                     if (!response.Result)
                     {
-                        _logger.LogWarning($"Remove fehlgeschlagen");
+                        _logger.LogWarning("Remove fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
@@ -259,7 +359,7 @@ namespace DisCacheClient.Extensions.Caching.gRpc
 
                     if (!response.Result)
                     {
-                        _logger.LogWarning($"RemoveAsync fehlgeschlagen");
+                        _logger.LogWarning("RemoveAsync fehlgeschlagen");
                     }
                 }
                 catch (Exception ex)
