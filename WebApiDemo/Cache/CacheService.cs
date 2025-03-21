@@ -16,15 +16,16 @@ namespace WebApiDemo.Cache
                 UseCache = true,
                 SecondsLocal = 5,
                 SecondsRemote = 16000,
-                Subscribe = "_test*"
+                Subscribe = "_test*",
+                CacheKey = "_testKey"
             });
         }
 
-        private readonly string _testKey = "_testKey";
+        //private readonly string _testKey = "_testKey";
 
         public async Task<TestClass?> GetDocumentAsync(int id)
         {
-            string cacheKey = $"{_testKey}_{id}";
+            string cacheKey = $"{_testCache.CachePrefix}_{id}";
 
             return await _testCache.GetAsync(cacheKey);
         }
@@ -36,7 +37,7 @@ namespace WebApiDemo.Cache
                 return;
             }
 
-            string cacheKey = $"{_testKey}_{s.Id}";
+            string cacheKey = $"{_testCache.CachePrefix}_{s.Id}";
             await _testCache.AddAsync(cacheKey, s);
         }
 

@@ -1,12 +1,10 @@
 ﻿using DisCache.BackgroundTaskQueue;
 using DisCache.Mediator;
 using DisCache.Model;
-using Google.Protobuf.WellKnownTypes;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Stamon.Services;
 using System;
 using System.Diagnostics;
@@ -15,23 +13,22 @@ using System.Threading.Tasks;
 
 namespace DisCache.Services
 {
-
     public class CacheCore
     {
-        private readonly IDistributedCache _service;
+        private readonly IDistributedCache _distributedCache;
         private readonly IMemoryCache _memoryCache;
         private readonly ILogger<CacheCore> _logger;
         private readonly IBackgroundTaskQueue _taskQueue;
         private readonly StamonService _statisticManager;
         private readonly KeyService _keyService;
-        private readonly IMediator _mediator; // MediatR
+        private readonly IMediator _mediator;
 
         public CacheCore(
             IMediator mediator,
             KeyService keyService,
             StamonService statisticManager,
             IBackgroundTaskQueue taskQueue,
-            IDistributedCache service,
+            IDistributedCache distributedCache,
             IMemoryCache memoryCache,
             ILogger<CacheCore> logger)
         {
@@ -40,19 +37,15 @@ namespace DisCache.Services
             _statisticManager = statisticManager;
             _taskQueue = taskQueue;
             _logger = logger;
-            _service = service;
+            _distributedCache = distributedCache;
             _memoryCache = memoryCache;
         }
 
-
-        public async Task<byte[]> GetAsync(
-            string key,
-            CancellationToken token = new CancellationToken())
+        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
         {
+            var sw = Stopwatch.StartNew();
             try
             {
-                Stopwatch sw = new();
-                sw.Start();
 
                 _logger.LogInformation("Get {Key}", key);
 
@@ -60,122 +53,74 @@ namespace DisCache.Services
 
                 if (_keyService.HasAction(key) == KeyAction.Ignore)
                 {
-                    await _statisticManager.StatisticEvent("Miss");
+                    LogMiss(key, sw.ElapsedMilliseconds);
                     return null;
                 }
 
-                byte[] returnData = null;
+                byte[] data = TryGetFromMemoryCache(key, token);
+                if (data != null)
+                {
+                    LogHit(key, sw.ElapsedMilliseconds);
+                    await RefreshAsync(key, token);
+                    return data;
+                }
+
+                data = await _distributedCache.GetAsync(key, token);
+                if (data == null)
+                {
+                    LogMiss(key, sw.ElapsedMilliseconds);
+                    return null;
+                }
+
+                LogHit(key, sw.ElapsedMilliseconds);
 
                 if (Configuration.UseMemoryCacheAccelerator)
                 {
-                    returnData = _memoryCache.Get(key) as byte[];
-
-                    if (returnData != null)
-                    {
-                        if (Configuration.UseQueuedRefresh)
-                        {
-                            // Aufgabe in die Warteschlange stellen
-                            _taskQueue.QueueBackgroundWorkItem(async tk =>
-                            {
-                                try
-                                {
-                                    await _service.RefreshAsync(key, token);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Error refreshing cache key {Key}", key);
-                                }
-                            });
-                        }
-                        else
-                        {
-                            await _service.RefreshAsync(key, token);
-                        }
-                    }
+                    SetToMemoryCache(key, data, token);
                 }
 
-                if (returnData == null)
-                {
-                    returnData = await _service.GetAsync(key, token);
-
-                    if (returnData != null && Configuration.UseMemoryCacheAccelerator)
-                    {
-                        _memoryCache.Set(key, returnData,
-                            new MemoryCacheEntryOptions()
-                            {
-                                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
-                            });
-                    }
-                }
-
-                await _statisticManager.StatisticEvent(returnData != null ? "Hit" : "Miss");
-
-                sw.Stop();
-                _logger.LogDebug(returnData != null
-                    ? $"Hub: Get {key} - Hit. {sw.ElapsedMilliseconds} milliseconds."
-                    : $"Hub: Get {key} - Miss. {sw.ElapsedMilliseconds} milliseconds.");
-
-                return returnData;
+                return data;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Get");
+                _logger.LogError(ex, "Error in GetAsync for key {Key}", key);
                 throw;
+            }
+            finally
+            {
+                sw.Stop();
             }
         }
 
-        public async Task SetAsync(
-            string key,
-            byte[] value,
-            CacheOptions options,
-            CancellationToken token = new())
-        {
-            await SetAsync(key, value, GetDistributedCacheOptions(options), token);
-        }
-
-        public async Task SetAsync(
-            string key,
-            byte[] value,
-            DistributedCacheEntryOptions options,
-            CancellationToken token = new())
+        public async Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
         {
             try
             {
                 await _statisticManager.StatisticEvent("Request");
 
+                // Write data to the distributed cache
+                await _distributedCache.SetAsync(key, value, options, token);
                 await _statisticManager.StatisticEvent("Insert");
-
-                // Daten in den verteilten Cache schreiben
-                await _service.SetAsync(key, value, options, token);
 
                 if (Configuration.UseMemoryCacheAccelerator)
                 {
-                    _memoryCache.Set(key, value,
-                        new MemoryCacheEntryOptions()
-                        {
-                            AbsoluteExpiration = options.AbsoluteExpiration,
-                            AbsoluteExpirationRelativeToNow = options.AbsoluteExpirationRelativeToNow,
-                            SlidingExpiration = options.SlidingExpiration
-                        });
+                    SetToMemoryCache(key, value, token);
                 }
 
-                // Benachrichtige Clients über Änderungen
+                // Notify clients about changes
                 if (DisCacheConfiguration.UseEvents)
                 {
                     await _mediator.Publish(new KeyUpdatedNotification("Update", key), token);
                 }
-
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in SendData");
-               throw;
+                _logger.LogError(ex, "Error in SetAsync for key {Key}", key);
+                throw;
             }
         }
 
-        public async Task RefreshAsync(
-            string key,
-            CancellationToken token = new CancellationToken())
+        public async Task RefreshAsync(string key, CancellationToken token = default)
         {
             try
             {
@@ -183,23 +128,18 @@ namespace DisCache.Services
 
                 if (Configuration.UseMemoryCacheAccelerator)
                 {
-                    _memoryCache.Get(key);
+                    _memoryCache.Get(key); // Refresh in-memory cache
                 }
 
-                await _service.RefreshAsync(key, token);
-
+                await _distributedCache.RefreshAsync(key, token);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Refresh");
+                _logger.LogError(ex, "Error in RefreshAsync for key {Key}", key);
             }
-        
         }
 
-
-        public async Task RemoveAsync(
-            string key,
-            CancellationToken token = new CancellationToken())
+        public async Task RemoveAsync(string key, CancellationToken token = default)
         {
             try
             {
@@ -213,47 +153,65 @@ namespace DisCache.Services
                     _memoryCache.Remove(key);
                 }
 
-                await _service.RemoveAsync(key, token);
+                await _distributedCache.RemoveAsync(key, token);
 
-                // Benachrichtige Clients über die Löschung
+                // Notify clients about the deletion
                 if (DisCacheConfiguration.UseEvents)
                 {
                     await _mediator.Publish(new KeyDeletedNotification(key), token);
                 }
-
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Remove");
+                _logger.LogError(ex, "Error in RemoveAsync for key {Key}", key);
             }
         }
 
-        private static DistributedCacheEntryOptions GetDistributedCacheOptions(CacheOptions? o)
+        private byte[] TryGetFromMemoryCache(string key, CancellationToken token)
         {
-            if(o == default)
+            if (!Configuration.UseMemoryCacheAccelerator) return null;
+
+            var data = _memoryCache.Get(key) as byte[];
+            if (data != null && Configuration.UseQueuedRefresh)
+            {
+                _taskQueue.QueueBackgroundWorkItem(tk => RefreshAsync(key, tk));
+            }
+            return data;
+        }
+
+        private void SetToMemoryCache(string key, byte[] value, CancellationToken token)
+        {
+            var memoryCacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
+            };
+
+            _memoryCache.Set(key, value, memoryCacheOptions);
+        }
+
+        private void LogHit(string key, long elapsedMilliseconds)
+        {
+            _logger.LogDebug("Hub: Get {Key} - Hit. {ElapsedMilliseconds} milliseconds.", key, elapsedMilliseconds);
+        }
+
+        private void LogMiss(string key, long elapsedMilliseconds)
+        {
+            _logger.LogDebug("Hub: Get {Key} - Miss. {ElapsedMilliseconds} milliseconds.", key, elapsedMilliseconds);
+        }
+
+        private static DistributedCacheEntryOptions GetDistributedCacheOptions(CacheOptions? options)
+        {
+            if (options == null)
                 return null;
 
-            var options = new DistributedCacheEntryOptions { AbsoluteExpiration = o.AbsoluteExpiration };
+            var distributedCacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpiration = options.AbsoluteExpiration,
+                SlidingExpiration = options.SlidingExpiration.HasValue ? TimeSpan.FromMilliseconds(options.SlidingExpiration.Value) : null,
+                AbsoluteExpirationRelativeToNow = options.AbsoluteExpirationRelativeToNow.HasValue ? TimeSpan.FromMilliseconds(options.AbsoluteExpirationRelativeToNow.Value) : null
+            };
 
-            if (o.SlidingExpiration.HasValue)
-            {
-                options.SlidingExpiration = TimeSpan.FromMilliseconds(o.SlidingExpiration.Value);
-            }
-            else
-            {
-                options.SlidingExpiration = null;
-            }
-
-            if (o.AbsoluteExpirationRelativeToNow.HasValue)
-            {
-                options.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(o.AbsoluteExpirationRelativeToNow.Value);
-            }
-            else
-            {
-                options.SlidingExpiration = null;
-            }
-
-            return options;
+            return distributedCacheOptions;
         }
     }
 }

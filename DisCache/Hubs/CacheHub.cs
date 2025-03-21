@@ -17,272 +17,6 @@ using System.Linq;
 
 namespace DisCache.Hubs
 {
-    /// <summary>
-    /// SignalR's implementation of the cache server
-    /// </summary>
-    //public class CacheHub : Hub
-    //{
-    //    private readonly IDistributedCache _service;
-    //    private readonly IMemoryCache _memoryCache;
-    //    private readonly ILogger<CacheHub> _logger;
-    //    private readonly StamonService _statisticManager;
-    //    private readonly KeyService _keyService;
-    //    private readonly IBackgroundTaskQueue _taskQueue;
-
-    //    // Verwaltung der Muster und Client-Abonnements
-    //    private static readonly ConcurrentDictionary<string, string> Patterns = new ConcurrentDictionary<string, string>();
-    //    private static readonly ConcurrentDictionary<string, HashSet<string>> ClientPatterns = new ConcurrentDictionary<string, HashSet<string>>();
-
-
-    //    public CacheHub(
-    //        IBackgroundTaskQueue taskQueue,
-    //        StamonService statisticManager,
-    //        IDistributedCache service,
-    //        KeyService keyService,
-    //        IMemoryCache memoryCache,
-    //        ILogger<CacheHub> logger)
-    //    {
-    //        _taskQueue = taskQueue;
-    //        _service = service;
-    //        _memoryCache = memoryCache;
-    //        _logger = logger;
-    //        _keyService = keyService;
-    //        _statisticManager = statisticManager;
-    //    }
-
-    //    /// <summary>
-    //    /// Add a item to the cache.
-    //    /// </summary>
-    //    /// <param name="key">Key of the cached item</param>
-    //    /// <param name="data">Data to be cached</param>
-    //    /// <param name="cacheOptions">Cache-Options</param>
-    //    /// <returns></returns>
-    //    public async Task<SignalRResponse> SendData(string key, byte[] data, CacheOptions cacheOptions)
-    //    {
-    //        try
-    //        {
-
-    //            await _statisticManager.StatisticEvent("Request");
-    //            var options = new DistributedCacheEntryOptions();
-
-    //            if (cacheOptions != null)
-    //            {
-    //                options.AbsoluteExpiration = cacheOptions.AbsoluteExpiration;
-
-    //                if (cacheOptions.SlidingExpiration.HasValue)
-    //                {
-    //                    options.SlidingExpiration = TimeSpan.FromMilliseconds(cacheOptions.SlidingExpiration.Value);
-    //                }
-    //                else
-    //                {
-    //                    options.SlidingExpiration = null;
-    //                }
-
-    //                if (cacheOptions.AbsoluteExpirationRelativeToNow.HasValue)
-    //                {
-    //                    options.AbsoluteExpirationRelativeToNow =
-    //                        TimeSpan.FromMilliseconds(cacheOptions.AbsoluteExpirationRelativeToNow.Value);
-    //                }
-    //                else
-    //                {
-    //                    options.SlidingExpiration = null;
-    //                }
-    //            }
-
-    //            await _service.SetAsync(key, data, options);
-
-    //            await _statisticManager.StatisticEvent("Insert");
-
-    //            if (Configuration.UseMemoryCacheAccelerator)
-    //            {
-    //                _memoryCache.Set(key, data,
-    //                    new MemoryCacheEntryOptions()
-    //                    {
-    //                        AbsoluteExpiration = options.AbsoluteExpiration,
-    //                        SlidingExpiration = TimeSpan.FromSeconds(Configuration.UseMemoryCacheAcceleratorTime)
-    //                    });
-    //            }
-
-    //            if (DisCacheConfiguration.UseEvents)
-    //                await Clients.Others.SendAsync("Update", "Update", key);
-
-    //            return new SignalRResponse() { Data = null, Success = true };
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Error");
-    //            return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
-    //        }
-
-    //    }
-
-    //    /// <summary>Returns a Pong
-    //    /// </summary>
-    //    /// <returns>Pong</returns>
-    //    public async Task<SignalRResponse> Ping()
-    //    {
-    //        try
-    //        {
-    //            //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
-    //            //_logger.LogInformation($"Transport={tt}");
-    //            _logger.LogInformation($"Ping");
-
-    //            await _statisticManager.StatisticEvent("Request");
-
-    //            return new SignalRResponse() { Data = Encoding.UTF8.GetBytes("Pong"), Success = true };
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Error");
-    //            return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
-    //        }
-    //    }
-
-    //    /// <summary>
-    //    /// Get cache by key.
-    //    /// </summary>
-    //    /// <param name="key">Key of the cached item</param>
-    //    /// <returns></returns>
-    //    public async Task<SignalRResponse> Get(string key)
-    //    {
-    //        try
-    //        {
-    //            Stopwatch sw = new Stopwatch();
-
-    //            _logger.LogInformation("Get {Key}", key);
-
-    //            await _statisticManager.StatisticEvent("Request");
-
-    //            if (_keyService.HasAction(key) == KeyAction.Ignore)
-    //            {
-    //                await _statisticManager.StatisticEvent("Miss");
-    //                return new SignalRResponse() { Data = null, Success = true };
-    //            }
-
-    //            byte[] returnData = null;
-
-    //            if (Configuration.UseMemoryCacheAccelerator)
-    //            {
-    //                // Wenn der InMemory-Accelerator aktiviert ist, erst mal darein schauen.
-    //                returnData = _memoryCache.Get(key) as byte[];
-    //            }
-
-    //            if (returnData != null)
-    //            {
-    //                if (Configuration.UseQueuedRefresh)
-    //                {
-    //                    // Aufgabe in die Warteschlange stellen
-    //                    _taskQueue.QueueBackgroundWorkItem(async token =>
-    //                    {
-    //                        try
-    //                        {
-    //                            await _service.RefreshAsync(key);
-    //                        }
-    //                        catch (Exception ex)
-    //                        {
-    //                            _logger.LogError(ex, "Error refreshing cache key {Key}", key);
-    //                        }
-    //                    });
-    //                }
-    //                else
-    //                {
-    //                    await _service.RefreshAsync(key);
-    //                }
-    //            }
-
-    //            returnData ??= await _service.GetAsync(key);
-
-    //            await _statisticManager.StatisticEvent(returnData != null
-    //                ? "Hit"
-    //                : "Miss");
-
-    //            sw.Stop();
-    //            if (returnData != null)
-    //            {
-    //                _logger.LogDebug($"Hub: Get {key} - Hit. {sw.ElapsedMilliseconds} milliseconds.");
-    //            }
-    //            else
-    //            {
-    //                _logger.LogDebug($"Hub: Get {key} - Fail. {sw.ElapsedMilliseconds} milliseconds.");
-    //            }
-
-    //            return new SignalRResponse() { Data = returnData, Success = true };
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Hub: Error");
-    //            return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
-    //        }
-    //    }
-
-    //    /// <summary>
-    //    /// Remove item from cache by key.
-    //    /// </summary>
-    //    /// <param name="key">Key of the cached item</param>
-    //    /// <returns></returns>
-    //    public async Task<SignalRResponse> Remove(string key)
-    //    {
-    //        try
-    //        {
-    //            //var tt = Context.Features.Get<IHttpTransportFeature>()!.TransportType;
-    //            //_logger.LogInformation($"Transport={tt}");
-    //            _logger.LogDebug("Remove {Key}", key);
-
-    //            await _statisticManager.StatisticEvent("Request");
-    //            await _statisticManager.StatisticEvent("Delete");
-
-    //            if (Configuration.UseMemoryCacheAccelerator)
-    //            {
-    //                // Wenn der InMemory-Accelerator aktiviert ist, erst mal da rein schauen.
-    //                _memoryCache.Remove(key);
-    //            }
-
-    //            await _service.RemoveAsync(key);
-
-    //            if (DisCacheConfiguration.UseEvents)
-    //                await Clients.All.SendAsync("Update", "Delete", key);
-
-    //            return new SignalRResponse() { Data = null, Success = true };
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Error");
-    //            return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
-    //        }
-    //    }
-
-    //    /// <summary>
-    //    /// Refresh item in cache by key.
-    //    /// </summary>
-    //    /// <param name="key">Key of the cached item</param>
-    //    /// <returns></returns>
-    //    public async Task<SignalRResponse> Refresh(string key)
-    //    {
-    //        try
-    //        {
-    //            await _statisticManager.StatisticEvent("Request");
-    //            //_statisticManager.StatisticEvent(StatisticsType.);
-
-    //            if (Configuration.UseMemoryCacheAccelerator)
-    //            {
-    //                // Wenn der InMemory-Accelerator aktiviert ist, erst mal darein schauen.
-    //                _memoryCache.Get(key);
-    //            }
-
-    //            await _service.RefreshAsync(key);
-
-    //            return new SignalRResponse() { Data = null, Success = true };
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Error");
-    //            return new SignalRResponse() { Data = null, Success = false, Message = ex.Message };
-    //        }
-    //    }
-
-
-    //}
-
     public class CacheHub : Hub
     {
         private readonly ILogger<CacheHub> _logger;
@@ -313,7 +47,7 @@ namespace DisCache.Hubs
         {
             try
             {
-                await _cacheCore.SetAsync(key, data, cacheOptions);
+                await _cacheCore.SetAsync(key, data, GetOptions(cacheOptions));
                 return new SignalRResponse() { Data = null, Success = true };
             }
             catch (Exception ex)
@@ -517,5 +251,41 @@ namespace DisCache.Hubs
         {
             base.Dispose(disposing);
         }
+
+        private DistributedCacheEntryOptions? GetOptions(CacheOptions options)
+        {
+            DistributedCacheEntryOptions distribuedOptions = null;
+
+            if (options != null)
+            {
+                distribuedOptions = new();
+                if (options.AbsoluteExpiration.HasValue)
+                {
+                    distribuedOptions.AbsoluteExpiration = options.AbsoluteExpiration;
+                }
+
+                if (options.SlidingExpiration.HasValue)
+                {
+                    distribuedOptions.SlidingExpiration = TimeSpan.FromMilliseconds(options.SlidingExpiration.Value);
+                }
+                else
+                {
+                    distribuedOptions.SlidingExpiration = null;
+                }
+
+                if (options.AbsoluteExpirationRelativeToNow.HasValue)
+                {
+                    distribuedOptions.AbsoluteExpirationRelativeToNow =
+                        TimeSpan.FromMilliseconds(options.AbsoluteExpirationRelativeToNow.Value);
+                }
+                else
+                {
+                    options.SlidingExpiration = 0;
+                }
+            }
+
+            return distribuedOptions;
+        }
+
     }
 }

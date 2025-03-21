@@ -167,25 +167,25 @@ namespace Persistance.Memory.Services
                     return dt;
 
                 case Scale.Millisecond:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond, DateTimeKind.Local);
 
                 case Scale.Second:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, DateTimeKind.Local);
 
                 case Scale.Minute:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, DateTimeKind.Local);
 
                 case Scale.Hour:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Local);
 
                 case Scale.Day:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0, DateTimeKind.Local);
 
                 case Scale.Month:
-                    return new DateTime(dt.Year, dt.Month, 0, 0, 0, 0);
+                    return new DateTime(dt.Year, dt.Month, 0, 0, 0, 0, DateTimeKind.Local);
 
                 case Scale.Year:
-                    return new DateTime(dt.Year, 0, 0, 0, 0, 0);
+                    return new DateTime(dt.Year, 0, 0, 0, 0, 0, DateTimeKind.Local);
 
                 default:
                     throw new ArgumentOutOfRangeException();

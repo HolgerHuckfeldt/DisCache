@@ -508,16 +508,16 @@ namespace Persistance.Sqlite
                     return dt;
 
                 case Scale.Millisecond:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond) - TimeSpan.FromMilliseconds(duration);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond, DateTimeKind.Local) - TimeSpan.FromMilliseconds(duration);
 
                 case Scale.Second:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second) - TimeSpan.FromSeconds(duration);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, DateTimeKind.Local) - TimeSpan.FromSeconds(duration);
 
                 case Scale.Minute:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0) - TimeSpan.FromMinutes(duration);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, DateTimeKind.Local) - TimeSpan.FromMinutes(duration);
 
                 case Scale.Hour:
-                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0) - TimeSpan.FromHours(duration);
+                    return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Local) - TimeSpan.FromHours(duration);
 
                 case Scale.Day:
                     return DateTime.Today.AddDays(duration * -1);

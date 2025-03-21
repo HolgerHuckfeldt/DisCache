@@ -1,12 +1,7 @@
 ﻿using DisCacheClient.Exceptions;
 using DisCacheClient.Extensions.Caching.Interfaces;
-using DisCacheClient.Extensions.Caching.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
@@ -22,6 +17,8 @@ namespace DisCacheClient.Local
         public int SecondsRemote { get; set; }
 
         public string Subscribe { get; set; }
+
+        public string CacheKey { get; set; }
     }
 
 
@@ -31,6 +28,8 @@ namespace DisCacheClient.Local
         private readonly LocalCacheOptions _options;
         private readonly IMemoryCache _memoryCache;
         private readonly IDistributedCache _distributedCache;
+
+        private readonly string _cacheKey;
 
         public LocalCacheItem(
 
@@ -58,6 +57,8 @@ namespace DisCacheClient.Local
         {
             _memoryCache?.Remove(key);
         }
+
+        public string CachePrefix => _cacheKey;
 
         public T Get(string key)
         {
