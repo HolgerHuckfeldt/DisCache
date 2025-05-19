@@ -123,8 +123,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 var r = await _connection.InvokeCoreAsync(
                     "Get",
                     typeof(SignalRResponse),
-                    new object?[] { key }
-                ) as SignalRResponse;
+                    new object?[] { key }, token) as SignalRResponse;
 
 
                 return r?.Data;
@@ -146,8 +145,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 var r = await _connection.InvokeCoreAsync(
                     "Ping",
                     typeof(SignalRResponse),
-                    new object?[] { "Ping" }
-                ) as SignalRResponse;
+                    new object?[] { "Ping" }, token) as SignalRResponse;
 
 
                 return r?.Data;
@@ -191,8 +189,7 @@ namespace DisCacheClient.Extensions.Caching.SignalR
                 var r = await _connection.InvokeCoreAsync(
                     "Refresh",
                     typeof(SignalRResponse),
-                    new object?[] { key }
-                );
+                    new object?[] { key }, token);
             }
             catch (Exception ex)
             {

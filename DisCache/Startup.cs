@@ -67,10 +67,19 @@ namespace DisCache
 
             services.AddCors(options =>
             {
-                options.AddPolicy("CorsPolicy", policy =>
+                //options.AddPolicy("CorsPolicy", policy =>
+                //{
+                //    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                //});
+
+                options.AddPolicy("SignalRCorsPolicy", policy => // Gib ihr einen spezifischen Namen
                 {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                    policy.WithOrigins("http://localhost:5173") // GENAUE URL deiner Svelte-App
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials(); // SEHR WICHTIG für SignalR
                 });
+                
             });
 
             services.AddMemoryCache(
@@ -215,8 +224,9 @@ namespace DisCache
 
             app.UseRouting();
 
-            app.UseCors("CorsPolicy");
-
+            //app.UseCors("CorsPolicy");
+            app.UseCors("SignalRCorsPolicy");
+            
             app.UseSerilogRequestLogging();
 
             app.UseAuthorization();

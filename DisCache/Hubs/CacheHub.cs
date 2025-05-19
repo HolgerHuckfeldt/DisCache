@@ -19,7 +19,6 @@ namespace DisCache.Hubs
         private readonly StamonService _statisticManager;
         private readonly CacheCore _cacheCore;
 
-
         // Verwaltung der Muster und Client-Abonnements
         private static readonly ConcurrentDictionary<string, string> Patterns = new();
         private static readonly ConcurrentDictionary<string, HashSet<string>> ClientPatterns = new();
@@ -176,25 +175,6 @@ namespace DisCache.Hubs
             // SubscriberId könnte z. B. die ConnectionId sein
             var subscriberId = Context.ConnectionId;
 
-            // Handler registrieren
-            //_eventBroker.SubscribeToUpdates(subscriberId, async (action, key) =>
-            //{
-            //    // Filtern Sie bei Bedarf nach Muster. Falls nötig, kann der Broker bereits gefiltert anliefern.
-            //    // Hier z. B. Clients, die bereits Muster registriert haben:
-            //    if (IsMatch(subscriberId, key))
-            //    {
-            //        await Clients.Caller.SendAsync("Update", action, key);
-            //    }
-            //});
-
-            //_eventBroker.SubscribeToDeletions(subscriberId, async (key) =>
-            //{
-            //    if (IsMatch(subscriberId, key))
-            //    {
-            //        await Clients.Caller.SendAsync("Update", "Delete", key);
-            //    }
-            //});
-
             return base.OnConnectedAsync();
         }
 
@@ -219,15 +199,15 @@ namespace DisCache.Hubs
             return ClientPatterns.Values.Any(p => p.Contains(pattern));
         }
 
-        private async Task NotifyClientsAsync(string action, string key)
-        {
-            var matchingPatterns = Patterns.Keys.Where(pattern => IsMatch(key, pattern));
+        //private async Task NotifyClientsAsync(string action, string key)
+        //{
+        //    var matchingPatterns = Patterns.Keys.Where(pattern => IsMatch(key, pattern));
 
-            foreach (var pattern in matchingPatterns)
-            {
-                await Clients.Group(pattern).SendAsync("Update", action, key);
-            }
-        }
+        //    foreach (var pattern in matchingPatterns)
+        //    {
+        //        await Clients.Group(pattern).SendAsync("Update", action, key);
+        //    }
+        //}
 
         private static bool IsMatch(string key, string pattern)
         {
