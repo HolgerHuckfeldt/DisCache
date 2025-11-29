@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NeoSmart.Caching.Sqlite;
 using Persistance.Memory.Services;
-using Persistance.Sqlite;
+using Persistance.LiteDb;
 //using NeoSmart.Caching.Sqlite;
 using Serilog;
 using System;
@@ -121,9 +121,9 @@ namespace DisCache
 
             string statSqitePath = Configuration.GetValue<string>("Monitor:EF");
 
-            services.AddSqliteProvider(options =>
+            services.AddLiteDbProvider(options =>
             {
-                options.CachePath = statSqitePath;
+                options.DatabasePath = statSqitePath;
             });
 
             services.AddSingleton<IStamonMemoryPersistance, PersistanceService>();
