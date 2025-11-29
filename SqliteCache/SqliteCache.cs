@@ -10,6 +10,7 @@ using DbCommand = Microsoft.Data.Sqlite.SqliteCommand;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using NeoSmart.Caching.SqliteCache;
 
 namespace NeoSmart.Caching.Sqlite
 {

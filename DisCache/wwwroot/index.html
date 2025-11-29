@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DisC Admin UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b0f17;
+            --panel: #111827;
+            --surface: #0f172a;
+            --muted: #9aa8c1;
+            --text: #e7edf7;
+            --accent: #5ae0c4;
+            --accent-2: #f4c95d;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+            --sidebar-width: 260px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Space Grotesk', 'Manrope', sans-serif;
+            background: radial-gradient(120% 120% at 20% 20%, rgba(90, 224, 196, 0.08), transparent 55%), radial-gradient(100% 100% at 80% 10%, rgba(244, 201, 93, 0.08), transparent 50%), var(--bg);
+            color: var(--text);
+        }
+
+        .frame {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(10, 13, 23, 0.8);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: linear-gradient(120deg, rgba(90, 224, 196, 0.15), rgba(244, 201, 93, 0.12));
+            border: 1px solid var(--border);
+        }
+
+        .topbar input {
+            background: #0b1323;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            min-width: 260px;
+        }
+
+        .topbar button {
+            border: none;
+            background: linear-gradient(120deg, var(--accent), #9ef3dd);
+            color: #0b101b;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 12px 30px rgba(90, 224, 196, 0.25);
+            transition: transform 0.1s ease;
+        }
+        .topbar button:hover { transform: translateY(-1px); }
+
+        .status {
+            color: var(--muted);
+            font-size: 13px;
+            margin-left: auto;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 6px 1fr;
+            min-height: 0;
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--border);
+            background: rgba(14, 18, 31, 0.8);
+            padding: 16px 14px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .splitter {
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            cursor: col-resize;
+            border-right: 1px solid var(--border);
+        }
+
+        .main {
+            padding: 18px 18px 80px;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 14px 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .card h3 { margin: 0 0 10px; font-size: 17px; }
+        .muted { color: var(--muted); }
+        .small { font-size: 12px; color: var(--muted); }
+
+        label {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            background: #0b1323;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-family: 'Manrope', sans-serif;
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        button {
+            border: none;
+            background: linear-gradient(120deg, var(--accent), #9ef3dd);
+            color: #0b101b;
+            border-radius: 10px;
+            padding: 11px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            box-shadow: 0 12px 30px rgba(90, 224, 196, 0.25);
+        }
+        button.secondary {
+            background: #141c2e;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+        button:hover { transform: translateY(-1px); }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+        }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(90, 224, 196, 0.12);
+            border: 1px solid rgba(90, 224, 196, 0.35);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 14px;
+            font-weight: 600;
+        }
+
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
+        .stat-row strong { font-size: 18px; }
+
+        .chart-container { position: relative; height: 260px; }
+
+        .viewer {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #0b1323;
+            padding: 10px 12px;
+            min-height: 160px;
+        }
+        .viewer pre {
+            margin: 0;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+        .viewer img {
+            max-width: 100%;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            border: 1px solid var(--border);
+            background: #0e1729;
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+        .tab.active {
+            background: linear-gradient(120deg, rgba(90, 224, 196, 0.16), rgba(158, 243, 221, 0.12));
+            border-color: rgba(90, 224, 196, 0.45);
+            opacity: 1;
+        }
+        .tab[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        @media (max-width: 960px) {
+            .workspace { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+            .splitter { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <div class="topbar">
+            <div class="logo">DisC Admin</div>
+            <input id="baseUrl" type="text" placeholder="API Basis (leer lassen für gleichen Host)" />
+            <button id="pingButton">Ping</button>
+            <div class="status" id="statusLine">Bereit.</div>
+        </div>
+
+        <div class="workspace" id="workspace">
+            <aside class="sidebar">
+                <div class="card">
+                    <h3>Systeminfo</h3>
+                    <div class="stat-row"><span class="muted">Name</span><strong id="svcName">–</strong></div>
+                    <div class="stat-row"><span class="muted">Version</span><strong id="svcVersion">–</strong></div>
+                    <div class="stat-row"><span class="muted">Backend</span><strong id="svcBackend">–</strong></div>
+                    <div class="stat-row"><span class="muted">Details</span><strong id="svcBackendInfo">–</strong></div>
+                    <div class="stat-row"><span class="muted">Startup</span><strong id="svcStartup">–</strong></div>
+                </div>
+                <div class="card">
+                    <h3>Slot Auswahl</h3>
+                    <label for="slotSelect">Slot</label>
+                    <select id="slotSelect"></select>
+                    <div class="toolbar" style="margin-top: 10px;">
+                        <button class="secondary" id="refreshStats">Aktualisieren</button>
+                        <span class="badge" id="slotCount">– Slots</span>
+                    </div>
+                    <div class="grid" style="margin-top: 6px;">
+                        <div class="stat-row"><span class="muted">Hits</span><strong id="hitsTotal">0</strong></div>
+                        <div class="stat-row"><span class="muted">Misses</span><strong id="missesTotal">0</strong></div>
+                        <div class="stat-row"><span class="muted">Inserts</span><strong id="insertsTotal">0</strong></div>
+                        <div class="stat-row"><span class="muted">Requests</span><strong id="requestsTotal">0</strong></div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="splitter" id="splitter" title="Ziehen zum Anpassen"></div>
+
+            <main class="main">
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3>Abfrage</h3>
+                        <div class="grid">
+                            <div>
+                                <label for="fetchKey">Key</label>
+                                <input id="fetchKey" placeholder="Schlüssel für Abfrage" />
+                            </div>
+                        </div>
+                        <div class="toolbar" style="margin-top: 10px;">
+                            <button id="fetchButton">Abrufen</button>
+                            <span class="small muted">Abruf lädt einmal und rendert als Tab (Hex, Text, JSON, Bild, Download).</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Ergebnis</h3>
+                        <div class="tabs" id="viewerTabs">
+                            <button class="tab active" data-tab="hex">Hex</button>
+                            <button class="tab" data-tab="text">Text</button>
+                            <button class="tab" data-tab="json">JSON</button>
+                            <button class="tab" data-tab="image">Image</button>
+                            <button class="tab" data-tab="download">Download</button>
+                        </div>
+                        <div class="viewer">
+                            <pre id="resultText">Noch nichts geladen.</pre>
+                            <img id="resultImage" alt="Geladenes Bild" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 14px;">
+                    <div style="display:flex; justify-content: space-between; align-items: center; gap:10px;">
+                        <div>
+                            <h3>Statistiken</h3>
+                            <p class="small muted">Slots auswählen und Requests in Kurven sehen.</p>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="margin-top: 10px;">
+                        <canvas id="statsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="grid grid-3" style="margin-top: 14px;">
+                    <div class="card">
+                        <h3>String setzen</h3>
+                        <div class="grid">
+                            <div>
+                                <label for="setKey">Key</label>
+                                <input id="setKey" placeholder="Schlüssel" />
+                            </div>
+                            <div>
+                                <label for="setValue">Wert</label>
+                                <textarea id="setValue" placeholder="Text der gespeichert werden soll"></textarea>
+                            </div>
+                            <div>
+                                <label for="setDuration">TTL in Sekunden</label>
+                                <input id="setDuration" type="number" min="1" placeholder="z. B. 300" />
+                            </div>
+                        </div>
+                        <div class="toolbar" style="margin-top: 10px;">
+                            <button id="saveString">String speichern</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Binary Upload / Download</h3>
+                        <div class="grid">
+                            <div>
+                                <label for="binKey">Key (optional, sonst Dateiname)</label>
+                                <input id="binKey" placeholder="Key für den Upload" />
+                            </div>
+                            <div>
+                                <label for="binTtl">TTL in Sekunden (optional)</label>
+                                <input id="binTtl" type="number" min="1" placeholder="z. B. 600" />
+                            </div>
+                            <div>
+                                <label for="binFile">Datei</label>
+                                <input id="binFile" type="file" />
+                            </div>
+                        </div>
+                        <div class="toolbar" style="margin-top: 10px;">
+                            <button id="uploadBinary">Hochladen</button>
+                        </div>
+                        <div class="toolbar">
+                            <div style="flex:1;">
+                                <label for="downloadKey">Download Key</label>
+                                <input id="downloadKey" placeholder="Schlüssel zum Herunterladen" />
+                            </div>
+                            <button class="secondary" id="downloadBinary">Herunterladen</button>
+                        </div>
+                        <div class="small muted" id="binaryResult">Bereit.</div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Wartung</h3>
+                        <div class="grid">
+                            <div>
+                                <label for="maintKey">Key</label>
+                                <input id="maintKey" placeholder="Key für Refresh/Remove" />
+                            </div>
+                        </div>
+                        <div class="toolbar" style="margin-top: 10px;">
+                            <button class="secondary" id="refreshKey">Refresh</button>
+                            <button class="secondary" id="deleteKey">Löschen</button>
+                        </div>
+                        <div class="small muted" id="maintResult">Bereit.</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const state = { chart: null, lastImageUrl: null, activeTab: 'hex', buffer: null, text: '', json: null, hasImage: false, imageUrl: null };
+
+        function currentBase() {
+            const raw = $('baseUrl').value.trim();
+            return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+        }
+
+        function setStatus(msg, tone = 'info') {
+            const line = $('statusLine');
+            line.textContent = msg;
+            line.style.color = tone === 'error' ? '#f88' : tone === 'ok' ? '#8ee5c9' : '#9aa8c1';
+        }
+
+        async function api(path, options = {}) {
+            const url = `${currentBase()}${path}`;
+            const res = await fetch(url, options);
+            return res;
+        }
+
+        function sumCounts(data) {
+            return (data || []).reduce((acc, cur) => acc + (cur.count ?? cur.Count ?? 0), 0);
+        }
+
+        function normalizeSeries(series) {
+            return (series || [])
+                .map(item => {
+                    const t = item.time ?? item.Time;
+                    const c = item.count ?? item.Count ?? 0;
+                    const d = new Date(t);
+                    return isNaN(d.getTime()) ? null : { ts: d.getTime(), count: c };
+                })
+                .filter(Boolean);
+        }
+
+        function buildChartData(hits, misses, inserts, requests) {
+            const points = [...normalizeSeries(hits), ...normalizeSeries(misses), ...normalizeSeries(inserts), ...normalizeSeries(requests)];
+            const timestamps = Array.from(new Set(points.map(p => p.ts))).sort((a, b) => a - b);
+            if (!timestamps.length) {
+                return {
+                    labels: ['Keine Daten'],
+                    datasets: [
+                        { label: 'Hits', data: [0], borderColor: '#5ae0c4', tension: 0.3 },
+                        { label: 'Misses', data: [0], borderColor: '#f07f7f', tension: 0.3 },
+                        { label: 'Inserts', data: [0], borderColor: '#9ef3dd', tension: 0.3 },
+                        { label: 'Requests', data: [0], borderColor: '#f4c95d', tension: 0.3 }
+                    ]
+                };
+            }
+
+            const labels = timestamps.map(ts => new Date(ts).toLocaleTimeString('de-DE'));
+            const toSeries = (raw, color) => {
+                const map = new Map(normalizeSeries(raw).map(p => [p.ts, p.count]));
+                return {
+                    label: color.label,
+                    data: timestamps.map(ts => map.get(ts) ?? 0),
+                    borderColor: color.color,
+                    backgroundColor: color.fill || color.color,
+                    tension: 0.3
+                };
+            };
+
+            return {
+                labels,
+                datasets: [
+                    toSeries(hits, { label: 'Hits', color: '#5ae0c4' }),
+                    toSeries(misses, { label: 'Misses', color: '#f07f7f' }),
+                    toSeries(inserts, { label: 'Inserts', color: '#9ef3dd' }),
+                    toSeries(requests, { label: 'Requests', color: '#f4c95d' })
+                ]
+            };
+        }
+
+        async function loadSystemInfo() {
+            try {
+                const res = await api('/api/Statistic/information');
+                if (!res.ok) throw new Error('Fehler beim Laden der Systeminfo');
+                const data = await res.json();
+                $('svcName').textContent = data.name ?? '–';
+                $('svcVersion').textContent = data.version ?? '–';
+                $('svcBackend').textContent = data.backend ?? '–';
+                $('svcBackendInfo').textContent = data.backendInformation ?? '–';
+                const startup = data.startup ? new Date(data.startup) : null;
+                $('svcStartup').textContent = startup ? startup.toLocaleString('de-DE') : '–';
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function ping() {
+            try {
+                const res = await api('/api/Cache/Ping');
+                const txt = await res.text();
+                setStatus(res.ok ? `Ping: ${txt}` : `Ping fehlgeschlagen (${res.status})`, res.ok ? 'ok' : 'error');
+            } catch (err) {
+                setStatus(`Ping fehlgeschlagen: ${err.message}`, 'error');
+            }
+        }
+
+        async function loadSlots() {
+            try {
+                const res = await api('/api/Statistic/slots');
+                if (!res.ok) throw new Error('Slots konnten nicht geladen werden.');
+                const data = await res.json();
+                const slots = Array.isArray(data) && data.length ? data : ['default'];
+                $('slotSelect').innerHTML = slots.map(s => `<option value="${s}">${s}</option>`).join('');
+                $('slotCount').textContent = `${slots.length} Slots`;
+            } catch (err) {
+                $('slotSelect').innerHTML = '<option value="default">default</option>';
+                $('slotCount').textContent = '1 Slot';
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function loadStats() {
+            const slot = $('slotSelect').value || 'default';
+            const slotPath = slot === 'default' ? '' : `/${encodeURIComponent(slot)}`;
+            try {
+                const [hits, misses, inserts, requests] = await Promise.all([
+                    api(`/api/Statistic/hits${slotPath}`),
+                    api(`/api/Statistic/misses${slotPath}`),
+                    api(`/api/Statistic/inserts${slotPath}`),
+                    api(`/api/Statistic/requests${slotPath}`)
+                ]);
+
+                const toJson = async (res) => res.ok ? res.json() : [];
+                const hitsData = await toJson(hits);
+                const missesData = await toJson(misses);
+                const insertsData = await toJson(inserts);
+                const requestsData = await toJson(requests);
+
+                $('hitsTotal').textContent = sumCounts(hitsData);
+                $('missesTotal').textContent = sumCounts(missesData);
+                $('insertsTotal').textContent = sumCounts(insertsData);
+                $('requestsTotal').textContent = sumCounts(requestsData);
+
+                const chartData = buildChartData(hitsData, missesData, insertsData, requestsData);
+                if (!state.chart) {
+                    state.chart = new Chart($('statsChart'), {
+                        type: 'line',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { labels: { color: '#dce4f3' } } },
+                            scales: {
+                                x: { ticks: { color: '#9fb2c6' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                                y: { beginAtZero: true, ticks: { color: '#9fb2c6' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                            }
+                        }
+                    });
+                } else {
+                    state.chart.data = chartData;
+                    state.chart.update();
+                }
+            } catch (err) {
+                setStatus(`Statistiken: ${err.message}`, 'error');
+            }
+        }
+
+        function showTextResult(text) {
+            const pre = $('resultText');
+            const img = $('resultImage');
+            if (state.lastImageUrl) {
+                URL.revokeObjectURL(state.lastImageUrl);
+                state.lastImageUrl = null;
+            }
+            img.style.display = 'none';
+            pre.style.display = 'block';
+            pre.textContent = text;
+        }
+
+        function showImageResult(url) {
+            const pre = $('resultText');
+            const img = $('resultImage');
+            if (state.lastImageUrl) {
+                URL.revokeObjectURL(state.lastImageUrl);
+            }
+            state.lastImageUrl = url;
+            pre.style.display = 'none';
+            img.style.display = 'block';
+            img.src = url;
+        }
+
+        function formatHex(buffer) {
+            const bytes = new Uint8Array(buffer);
+            const rows = [];
+            for (let i = 0; i < bytes.length; i += 16) {
+                const slice = bytes.slice(i, i + 16);
+                const hex = Array.from(slice).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                rows.push(hex);
+            }
+            return rows.join('\n') || '(leer)';
+        }
+
+        function activateTab(tabName) {
+            state.activeTab = tabName;
+            document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+            renderActiveTab();
+        }
+
+        function renderActiveTab() {
+            const tab = state.activeTab;
+            if (!state.buffer) {
+                showTextResult('Noch nichts geladen.');
+                return;
+            }
+            switch (tab) {
+                case 'hex':
+                    showTextResult(formatHex(state.buffer));
+                    break;
+                case 'text':
+                    showTextResult(state.text || '(leer)');
+                    break;
+                case 'json':
+                    if (state.json) {
+                        showTextResult(JSON.stringify(state.json, null, 2));
+                    } else {
+                        showTextResult('Kein gültiges JSON.');
+                    }
+                    break;
+                case 'image':
+                    if (state.hasImage && state.imageUrl) {
+                        showImageResult(state.imageUrl);
+                    } else {
+                        showTextResult('Kein Bild-Content.');
+                    }
+                    break;
+                case 'download':
+                    startDownload();
+                    showTextResult('Download gestartet.');
+                    break;
+            }
+        }
+
+        function startDownload() {
+            if (!state.buffer) return;
+            const key = $('fetchKey').value.trim() || 'download';
+            const blob = new Blob([state.buffer], { type: state.contentType || 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = key;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function updateTabAvailability() {
+            document.querySelectorAll('.tab').forEach(btn => {
+                const tab = btn.dataset.tab;
+                let disabled = false;
+                if (tab === 'json' && !state.json) disabled = true;
+                if (tab === 'image' && !state.hasImage) disabled = true;
+                btn.disabled = disabled;
+                if (disabled && tab === state.activeTab) {
+                    state.activeTab = 'hex';
+                }
+            });
+        }
+
+        async function fetchValue() {
+            const key = $('fetchKey').value.trim();
+            if (!key) return setStatus('Bitte Key angeben.', 'error');
+            try {
+                const res = await api(`/api/Cache/${encodeURIComponent(key)}`);
+                if (!res.ok) {
+                    showTextResult(`Fehler ${res.status}`);
+                    return setStatus('Key nicht gefunden oder Fehler.', 'error');
+                }
+                const buffer = await res.arrayBuffer();
+                const contentType = res.headers.get('Content-Type') || '';
+                let text = '';
+                try {
+                    text = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(buffer));
+                } catch {
+                    text = '';
+                }
+                let parsedJson = null;
+                try {
+                    parsedJson = JSON.parse(text);
+                } catch { parsedJson = null; }
+
+                if (state.imageUrl) {
+                    URL.revokeObjectURL(state.imageUrl);
+                }
+
+                state.buffer = buffer;
+                state.text = text;
+                state.json = parsedJson;
+                state.contentType = contentType;
+                state.hasImage = contentType.startsWith('image/');
+                state.imageUrl = state.hasImage ? URL.createObjectURL(new Blob([buffer], { type: contentType || 'application/octet-stream' })) : null;
+
+                updateTabAvailability();
+                activateTab(parsedJson ? 'json' : 'hex');
+                setStatus('Wert geladen.', 'ok');
+            } catch (err) {
+                showTextResult(err.message);
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function saveString() {
+            const key = $('setKey').value.trim();
+            const value = $('setValue').value;
+            const duration = parseInt($('setDuration').value, 10) || 300;
+            if (!key) return setStatus('Bitte Key angeben.', 'error');
+            try {
+                const res = await api('/api/Cache/String', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value, duration })
+                });
+                setStatus(res.ok ? 'String gespeichert.' : `Fehler: ${res.status}`, res.ok ? 'ok' : 'error');
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function uploadBinary() {
+            const file = $('binFile').files[0];
+            if (!file) return setStatus('Bitte Datei wählen.', 'error');
+            const key = $('binKey').value.trim() || file.name;
+            const ttl = parseInt($('binTtl').value, 10);
+            const options = ttl ? { AbsoluteExpirationRelativeToNow: ttl * 1000 } : {};
+            const form = new FormData();
+            form.append(encodeURIComponent(JSON.stringify(options)), file, key);
+            try {
+                const res = await api('/api/Cache', { method: 'POST', body: form });
+                $('binaryResult').textContent = res.ok ? `Upload ok (${key})` : `Upload fehlgeschlagen (${res.status})`;
+                setStatus(res.ok ? 'Binary gespeichert.' : 'Upload fehlgeschlagen.', res.ok ? 'ok' : 'error');
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function downloadBinary() {
+            const key = $('downloadKey').value.trim();
+            if (!key) return setStatus('Bitte Key für Download angeben.', 'error');
+            try {
+                const res = await api(`/api/Cache/${encodeURIComponent(key)}`);
+                if (!res.ok) {
+                    $('binaryResult').textContent = `Download fehlgeschlagen (${res.status})`;
+                    return setStatus('Download fehlgeschlagen.', 'error');
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = key;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                $('binaryResult').textContent = `Download gestartet (${key})`;
+                setStatus('Download gestartet.', 'ok');
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function refreshKey() {
+            const key = $('maintKey').value.trim();
+            if (!key) return setStatus('Key angeben.', 'error');
+            try {
+                const res = await api(`/api/Cache/${encodeURIComponent(key)}`, { method: 'PUT' });
+                $('maintResult').textContent = res.ok ? 'Refresh ok.' : `Refresh fehlgeschlagen (${res.status})`;
+                setStatus(res.ok ? 'Refresh ok.' : 'Refresh fehlgeschlagen.', res.ok ? 'ok' : 'error');
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        async function deleteKey() {
+            const key = $('maintKey').value.trim();
+            if (!key) return setStatus('Key angeben.', 'error');
+            try {
+                const res = await api(`/api/Cache/${encodeURIComponent(key)}`, { method: 'DELETE' });
+                $('maintResult').textContent = res.ok ? 'Löschung ok.' : `Fehler (${res.status})`;
+                setStatus(res.ok ? 'Key gelöscht.' : 'Löschen fehlgeschlagen.', res.ok ? 'ok' : 'error');
+            } catch (err) {
+                setStatus(err.message, 'error');
+            }
+        }
+
+        function wireUi() {
+            $('pingButton').addEventListener('click', ping);
+            $('refreshStats').addEventListener('click', loadStats);
+            $('slotSelect').addEventListener('change', loadStats);
+            $('fetchButton').addEventListener('click', fetchValue);
+            $('saveString').addEventListener('click', saveString);
+            $('uploadBinary').addEventListener('click', uploadBinary);
+            $('downloadBinary').addEventListener('click', downloadBinary);
+            $('refreshKey').addEventListener('click', refreshKey);
+            $('deleteKey').addEventListener('click', deleteKey);
+            document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => !btn.disabled && activateTab(btn.dataset.tab)));
+            setupSplitter();
+        }
+
+        function setupSplitter() {
+            const splitter = $('splitter');
+            const workspace = $('workspace');
+            let dragging = false;
+            splitter.addEventListener('mousedown', () => { dragging = true; document.body.style.userSelect = 'none'; });
+            window.addEventListener('mouseup', () => { dragging = false; document.body.style.userSelect = ''; });
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                const min = 200;
+                const max = 420;
+                const rect = workspace.getBoundingClientRect();
+                let width = e.clientX - rect.left;
+                width = Math.max(min, Math.min(max, width));
+                document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
+            });
+        }
+
+        async function init() {
+            wireUi();
+            await loadSystemInfo();
+            await loadSlots();
+            await loadStats();
+        }
+
+        init();
+    </script>
+</body>
+</html>
