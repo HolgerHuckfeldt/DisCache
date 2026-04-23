@@ -14,6 +14,8 @@ namespace Persistance.LiteDb.Services
 {
     internal class LiteDbService : IStamonDatabasePersistance, IDisposable
     {
+        public string ProviderType => "LiteDB";
+
         private readonly LiteDatabase _db;
         private readonly ILiteCollection<SlotDocument> _slots;
         private readonly ILiteCollection<ItemDocument> _items;
@@ -23,6 +25,7 @@ namespace Persistance.LiteDb.Services
 
         public LiteDbService(IOptions<LiteDbOptions> options, ILogger<LiteDbService> logger)
         {
+            
             _logger = logger;
             _db = new LiteDatabase(options.Value.ConnectionString);
             _slots = _db.GetCollection<SlotDocument>("slots");

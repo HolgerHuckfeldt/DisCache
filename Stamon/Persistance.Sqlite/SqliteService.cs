@@ -17,7 +17,9 @@ namespace Persistance.Sqlite
 {
     internal class SqliteService : IStamonDatabasePersistance
     {
-        #nullable enable
+#nullable enable
+        public string ProviderType => "EF";
+
         public const int SchemaVersion = 1;
 
         private readonly SqliteCacheOptions _config;

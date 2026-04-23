@@ -8,6 +8,8 @@ namespace Persistance.Memory.Services
 {
     public class PersistanceService : IStamonMemoryPersistance
     {
+        public string ProviderType => "Memory";
+
         private static readonly object AddLock = new object();
         private readonly ILogger<PersistanceService> _logger;
 

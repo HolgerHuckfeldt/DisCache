@@ -32,6 +32,7 @@
     <ProjectReference Include="..\SqliteCache\SqliteCache.csproj" />
     <ProjectReference Include="..\Stamon\Persistance.Memory\Persistance.Memory.csproj" />
     <ProjectReference Include="..\Stamon\Persistance.LiteDb\Persistance.LiteDb.csproj" />
+    <ProjectReference Include="..\Stamon\Persistance.Sqlite\Persistance.Sqlite.csproj" />
     <ProjectReference Include="..\Stamon\Stamon.Types\Stamon.Types.csproj" />
     <ProjectReference Include="..\Stamon\Stamon\Stamon.csproj" />
   </ItemGroup>

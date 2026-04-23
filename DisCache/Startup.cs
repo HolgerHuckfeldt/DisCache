@@ -15,9 +15,11 @@ using Microsoft.Extensions.Options;
 using NeoSmart.Caching.Sqlite;
 using Persistance.Memory.Services;
 using Persistance.LiteDb;
+using Persistance.Sqlite;
 //using NeoSmart.Caching.Sqlite;
 using Serilog;
 using System;
+using System.Linq;
 using Stamon.Model;
 using Stamon.Services;
 using Stamon.Types.Interfaces;
@@ -119,11 +121,21 @@ namespace DisCache
 
             services.AddSingleton<StamonService>();
 
-            string statSqitePath = Configuration.GetValue<string>("Monitor:EF");
+            var statSqlitePath = Configuration.GetValue<string>("Monitor:EF");
+            services.AddSqliteProvider(options =>
+            {
+                options.CachePath = statSqlitePath;
+            });
+
+            var statLiteDbPath = Configuration.GetValue<string>("Monitor:LiteDb");
+            if (string.IsNullOrWhiteSpace(statLiteDbPath))
+            {
+                statLiteDbPath = statSqlitePath;
+            }
 
             services.AddLiteDbProvider(options =>
             {
-                options.DatabasePath = statSqitePath;
+                options.DatabasePath = statLiteDbPath;
             });
 
             services.AddSingleton<IStamonMemoryPersistance, PersistanceService>();

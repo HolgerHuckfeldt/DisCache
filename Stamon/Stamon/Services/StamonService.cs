@@ -16,7 +16,7 @@ namespace Stamon.Services
     public class StamonService : IDisposable
     {
         private readonly ILogger<StamonService> _logger;
-        private readonly IStamonPersistance _storeDatabase;
+        private readonly IEnumerable<IStamonDatabasePersistance> _storeDatabases;
         private readonly IStamonMemoryPersistance _storeMemory;
         private readonly IOptions<StarisConfig> _slotConfig;
         private readonly Dictionary<string, StamonSlot> _slots = new();
@@ -28,13 +28,13 @@ namespace Stamon.Services
         private object _lock = new object();
 
         public StamonService(
-            IStamonDatabasePersistance storeDatabase,
+            IEnumerable<IStamonDatabasePersistance> storeDatabases,
             IStamonMemoryPersistance storeMemory,
             IOptions<StarisConfig> slotConfig,
             ILogger<StamonService> logger)
         {
             _slotConfig = slotConfig;
-            _storeDatabase = storeDatabase;
+            _storeDatabases = storeDatabases;
             _storeMemory = storeMemory;
             _logger = logger;
 
@@ -108,17 +108,13 @@ namespace Stamon.Services
 
             IStamonPersistance store;
 
-            switch (sc.Type)
+            if (string.Equals(sc.Type, "Memory", StringComparison.OrdinalIgnoreCase))
             {
-                case "EF":
-                    store = _storeDatabase;
-                    break;
-                case "Memory":
-                    store = _storeMemory;
-                    break;
-                default:
-                    store = _storeMemory;
-                    break;
+                store = _storeMemory;
+            }
+            else
+            {
+                store = ResolveDatabase(sc.Type) ?? (IStamonPersistance)_storeMemory;
             }
 
             return new StamonSlot(GetScale(sc.Scale), sc.Scale.Duration, store);
@@ -170,6 +166,18 @@ namespace Stamon.Services
         {
             var s = _slots.FirstOrDefault(s => s.Value.Default);
             return s.Value;
+        }
+
+        private IStamonDatabasePersistance? ResolveDatabase(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type))
+            {
+                return _storeDatabases.FirstOrDefault();
+            }
+
+            return _storeDatabases.FirstOrDefault(p =>
+                       string.Equals(p.ProviderType, type, StringComparison.OrdinalIgnoreCase))
+                   ?? _storeDatabases.FirstOrDefault();
         }
 
         private void ForwardTimer_Elapsed(object? sender, ElapsedEventArgs e)
