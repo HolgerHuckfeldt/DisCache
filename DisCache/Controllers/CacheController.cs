@@ -20,24 +20,18 @@ namespace DisCache.Controllers
     [ApiController]
     public class CacheController : ControllerBase
     {
-        //private readonly IDistributedCache _service;
         private readonly CacheCore _cacheCore;
-        private readonly IMemoryCache _memoryCache;
         private readonly ILogger<CacheController> _logger;
         private readonly StamonService _stamonSlotService;
         private readonly KeyService _keyService;
 
         public CacheController(
             CacheCore cacheCore,
-            IDistributedCache memoryService,
-            IMemoryCache memoryCache,
             ILogger<CacheController> logger,
             KeyService keyService,
             StamonService stamonSlotService)
         {
             _cacheCore = cacheCore;
-            //_service = memoryService;
-            _memoryCache = memoryCache;
             _logger = logger;
             _keyService = keyService;
             _stamonSlotService = stamonSlotService;
